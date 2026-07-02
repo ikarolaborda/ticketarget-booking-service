@@ -8,6 +8,7 @@ use App\Domain\Payment\PaymentGateway;
 use App\Infrastructure\Payment\StripePaymentGateway;
 use App\Services\AuthTokenVerifier;
 use App\Services\QueueTokenIssuer;
+use App\Services\TicketCodeIssuer;
 use Illuminate\Contracts\Redis\Factory as Redis;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\ServiceProvider;
@@ -25,6 +26,10 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->singleton(AuthTokenVerifier::class, fn (): AuthTokenVerifier => new AuthTokenVerifier(
             secret: (string) config('auth_token.secret'),
             issuer: (string) config('auth_token.issuer'),
+        ));
+
+        $this->app->singleton(TicketCodeIssuer::class, fn (): TicketCodeIssuer => new TicketCodeIssuer(
+            secret: (string) config('auth_token.secret'),
         ));
 
         $this->app->singleton(QueueTokenIssuer::class, fn ($app): QueueTokenIssuer => new QueueTokenIssuer(

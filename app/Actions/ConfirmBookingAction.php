@@ -107,7 +107,12 @@ final readonly class ConfirmBookingAction
                 ->pluck('seat', 'id')
                 ->all();
 
-            Mail::to($email)->send(new TicketsConfirmationMail($reservation, $bookings, $seats));
+            $codes = app(\App\Services\TicketCodeIssuer::class);
+            $entryCodes = $bookings->mapWithKeys(
+                fn (Booking $booking) => [$booking->id => $codes->issue($booking->id)],
+            )->all();
+
+            Mail::to($email)->send(new TicketsConfirmationMail($reservation, $bookings, $seats, $entryCodes));
         } catch (Throwable $e) {
             $this->logger->error('Ticket email failed after confirmed booking', [
                 'reservation_id' => $reservation->id,

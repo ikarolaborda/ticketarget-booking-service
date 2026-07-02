@@ -21,6 +21,8 @@ final class TicketsConfirmationMail extends Mailable
         public readonly Collection $bookings,
         /** @var array<string, string> ticket id => seat label */
         public readonly array $seats,
+        /** @var array<string, string> booking id => signed entry code */
+        public readonly array $codes = [],
     ) {
     }
 
@@ -33,10 +35,10 @@ final class TicketsConfirmationMail extends Mailable
     {
         $lines = $this->bookings
             ->map(fn (Booking $booking): string => sprintf(
-                '  Seat %s — R$ %s (ticket %s)',
+                "  Seat %s — R$ %s\n  Entry code: %s",
                 $this->seats[$booking->ticket_id] ?? $booking->ticket_id,
                 $booking->amount,
-                $booking->ticket_id,
+                $this->codes[$booking->id] ?? 'available in My Tickets',
             ))
             ->implode("\n");
 

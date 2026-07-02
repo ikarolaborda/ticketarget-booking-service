@@ -5,11 +5,16 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\Booking;
+use App\Services\TicketCodeIssuer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 final readonly class MyBookingsController
 {
+    public function __construct(private TicketCodeIssuer $codes)
+    {
+    }
+
     public function __invoke(Request $request): JsonResponse
     {
         // OptionalBearerAuth only enriches the request; this endpoint is the
@@ -35,7 +40,14 @@ final readonly class MyBookingsController
                 'events.name as event_name',
                 'events.date as event_date',
                 'bookings.created_at as purchased_at',
-            ]);
+                'bookings.id as booking_id',
+            ])
+            ->map(function ($row) {
+                $row->ticket_code = $this->codes->issue($row->booking_id);
+                unset($row->booking_id);
+
+                return $row;
+            });
 
         return response()->json(['tickets' => $rows]);
     }
