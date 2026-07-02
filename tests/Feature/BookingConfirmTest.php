@@ -77,7 +77,8 @@ final class BookingConfirmTest extends BookingTestCase
         // The charge happens before the transaction, so the compensation path
         // must give the money back — exactly once, for exactly that charge.
         $this->assertCount(1, $this->gateway->charges);
-        $this->assertSame(['ch_fake_1'], $this->gateway->refunds);
+        $this->assertCount(1, $this->gateway->refunds);
+        $this->assertSame('ch_fake_1', $this->gateway->refunds[0]['charge_id']);
 
         // Everything inside the transaction must have rolled back.
         $this->assertDatabaseCount('bookings', 0);

@@ -17,10 +17,11 @@ final class FakePaymentGateway implements PaymentGateway
     /** @var list<array{charge_id: string, amount: int, currency: string, token: string, idempotency_key: string}> */
     public array $charges = [];
 
-    /** @var list<string> */
+    /** @var list<array{charge_id: string, amount: int|null, idempotency_key: string|null}> */
     public array $refunds = [];
 
     public bool $failCharge = false;
+    public bool $failRefund = false;
 
     public function charge(int $amountInCents, string $currency, string $paymentToken, string $idempotencyKey): PaymentResult
     {
@@ -41,8 +42,16 @@ final class FakePaymentGateway implements PaymentGateway
         return new PaymentResult($chargeId, $amountInCents, $currency);
     }
 
-    public function refund(string $chargeId): void
+    public function refund(string $chargeId, ?int $amountInCents = null, ?string $idempotencyKey = null): void
     {
-        $this->refunds[] = $chargeId;
+        if ($this->failRefund) {
+            throw new PaymentException('Refund failed.');
+        }
+
+        $this->refunds[] = [
+            'charge_id' => $chargeId,
+            'amount' => $amountInCents,
+            'idempotency_key' => $idempotencyKey,
+        ];
     }
 }

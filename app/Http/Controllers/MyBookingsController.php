@@ -39,6 +39,7 @@ final readonly class MyBookingsController
                 'bookings.charge_id',
                 'events.name as event_name',
                 'events.date as event_date',
+                'bookings.status',
                 'bookings.created_at as purchased_at',
                 'bookings.id as booking_id',
             ])

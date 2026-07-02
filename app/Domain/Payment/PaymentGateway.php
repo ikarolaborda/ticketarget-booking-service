@@ -17,10 +17,11 @@ interface PaymentGateway
     public function charge(int $amountInCents, string $currency, string $paymentToken, string $idempotencyKey): PaymentResult;
 
     /**
-     * Reverses a previously successful charge in full. Used to make the booking
-     * transaction safe: if the post-charge commit fails, the money is returned.
+     * Reverses part or all of a previously successful charge. The amount is
+     * ALWAYS explicit for policy refunds because one payment intent can cover
+     * several seats; null means "everything still refundable" (compensation path).
      *
      * @throws PaymentException when the refund cannot be issued
      */
-    public function refund(string $chargeId): void;
+    public function refund(string $chargeId, ?int $amountInCents = null, ?string $idempotencyKey = null): void;
 }

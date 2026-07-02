@@ -61,6 +61,7 @@ final readonly class ConfirmBookingAction
                 foreach ($locked as $ticket) {
                     $ticket->update(['status' => Ticket::STATUS_BOOKED]);
                     Booking::query()->create([
+                        'status' => Booking::STATUS_PAID,
                         'reservation_id' => $reservation->id,
                         'ticket_id' => $ticket->id,
                         'user_id' => $reservation->user_id,

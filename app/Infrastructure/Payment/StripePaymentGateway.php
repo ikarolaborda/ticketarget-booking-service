@@ -42,10 +42,19 @@ final readonly class StripePaymentGateway implements PaymentGateway
         return new PaymentResult($intent->id, $amountInCents, $currency);
     }
 
-    public function refund(string $chargeId): void
+    public function refund(string $chargeId, ?int $amountInCents = null, ?string $idempotencyKey = null): void
     {
+        $params = ['payment_intent' => $chargeId, 'reason' => 'requested_by_customer'];
+
+        if ($amountInCents !== null) {
+            $params['amount'] = $amountInCents;
+        }
+
         try {
-            $this->stripe->refunds->create(['payment_intent' => $chargeId]);
+            $this->stripe->refunds->create(
+                $params,
+                $idempotencyKey === null ? [] : ['idempotency_key' => $idempotencyKey],
+            );
         } catch (ApiErrorException $e) {
             throw new PaymentException($e->getMessage(), previous: $e);
         }

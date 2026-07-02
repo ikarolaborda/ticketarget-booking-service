@@ -32,6 +32,8 @@ final readonly class VerifyTicketController
             ->leftJoin('tickets', 'tickets.id', '=', 'bookings.ticket_id')
             ->leftJoin('events', 'events.id', '=', 'tickets.event_id')
             ->where('bookings.id', $bookingId)
+            // A ticket being refunded (or refunded) no longer admits anyone.
+            ->where('bookings.status', Booking::STATUS_PAID)
             ->first(['tickets.seat', 'events.name as event_name', 'events.date as event_date']);
 
         if ($row === null) {
