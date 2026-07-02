@@ -1,0 +1,45 @@
+{
+    "name": "ticketarget/booking-service",
+    "type": "project",
+    "description": "Booking service (Laravel) — seat reservation, payment, and ACID booking.",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.5",
+        "ext-pdo": "*",
+        "ext-redis": "*",
+        "laravel/framework": "^13.0",
+        "predis/predis": "^2.2",
+        "stripe/stripe-php": "^16.0",
+        "ticketarget/logging": "@dev"
+    },
+    "require-dev": {
+        "fakerphp/faker": "^1.23",
+        "laravel/pint": "^1.18",
+        "larastan/larastan": "^3.0",
+        "mockery/mockery": "^1.6",
+        "phpunit/phpunit": "^11.0"
+    },
+    "repositories": [
+        { "type": "path", "url": "../../libs/logging", "options": { "symlink": false } }
+    ],
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/",
+            "Database\\Factories\\": "database/factories/",
+            "Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": { "psr-4": { "Tests\\": "tests/" } },
+    "scripts": {
+        "lint": ["pint --test", "phpstan analyse"],
+        "fix": ["pint"],
+        "test": ["phpunit"]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true,
+        "allow-plugins": { "php-http/discovery": true }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

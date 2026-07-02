@@ -1,0 +1,35 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers;
+
+use App\Actions\ReserveSeatsAction;
+use App\Exceptions\SeatUnavailableException;
+use App\Http\Requests\ReserveRequest;
+use Illuminate\Http\JsonResponse;
+
+final readonly class ReserveController
+{
+    public function __construct(private ReserveSeatsAction $reserveSeats)
+    {
+    }
+
+    public function __invoke(ReserveRequest $request): JsonResponse
+    {
+        try {
+            $reservation = $this->reserveSeats->execute(
+                $request->validated('user_id'),
+                $request->ticketIds(),
+            );
+        } catch (SeatUnavailableException $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
+        }
+
+        return response()->json([
+            'reservation_id' => $reservation->id,
+            'status' => $reservation->status,
+            'expires_at' => $reservation->expires_at?->toIso8601String(),
+        ], 201);
+    }
+}
