@@ -40,6 +40,7 @@ abstract class BookingTestCase extends TestCase
         config([
             'cache.stores.redis' => ['driver' => 'array', 'serialize' => false],
             'queue_gate.secret' => 'test-queue-secret',
+            'auth_token.secret' => 'test-auth-secret',
         ]);
 
         $this->createTicketsTable();
@@ -116,6 +117,26 @@ abstract class BookingTestCase extends TestCase
         $signature = hash_hmac('sha256', $payloadJson, (string) config('queue_gate.secret'), true);
 
         return $this->base64Url($payloadJson).'.'.$this->base64Url($signature);
+    }
+
+    /**
+     * Builds a bearer token with the exact HS256 contract the Users service
+     * issues, so the OptionalBearerAuth path is exercised end to end.
+     */
+    protected function authToken(string $userId, string $email, int $expiresIn = 3600): string
+    {
+        $header = $this->base64Url(json_encode(['alg' => 'HS256', 'typ' => 'JWT'], JSON_THROW_ON_ERROR));
+        $payload = $this->base64Url(json_encode([
+            'iss' => config('auth_token.issuer'),
+            'sub' => $userId,
+            'email' => $email,
+            'name' => 'Test User',
+            'iat' => time(),
+            'exp' => time() + $expiresIn,
+        ], JSON_THROW_ON_ERROR));
+        $signature = $this->base64Url(hash_hmac('sha256', $header.'.'.$payload, (string) config('auth_token.secret'), true));
+
+        return $header.'.'.$payload.'.'.$signature;
     }
 
     private function base64Url(string $value): string

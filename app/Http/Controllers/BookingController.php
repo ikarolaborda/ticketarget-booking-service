@@ -21,8 +21,9 @@ final readonly class BookingController
         try {
             $reservation = $this->confirmBooking->execute(
                 $request->validated('reservation_id'),
-                $request->validated('user_id'),
+                $request->buyerId(),
                 $request->validated('payment_token'),
+                $request->buyerEmail(),
             );
         } catch (ReservationInvalidException $e) {
             return response()->json(['message' => $e->getMessage()], 422);

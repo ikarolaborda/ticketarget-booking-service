@@ -11,7 +11,7 @@ final class Booking extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['reservation_id', 'ticket_id', 'user_id', 'charge_id', 'amount'];
+    protected $fillable = ['reservation_id', 'ticket_id', 'user_id', 'email', 'charge_id', 'amount'];
 
     protected function casts(): array
     {

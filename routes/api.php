@@ -7,13 +7,14 @@ use App\Http\Controllers\JoinQueueController;
 use App\Http\Controllers\ReserveController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\VerifyQueueController;
+use App\Http\Middleware\OptionalBearerAuth;
 use App\Http\Middleware\RequireQueueToken;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/queue/join', JoinQueueController::class)->name('queue.join');
 Route::get('/internal/queue/verify', VerifyQueueController::class)->name('queue.verify');
 
-Route::post('/reserve', ReserveController::class)->middleware(RequireQueueToken::class)->name('reserve');
-Route::post('/booking', BookingController::class)->name('booking');
+Route::post('/reserve', ReserveController::class)->middleware([OptionalBearerAuth::class, RequireQueueToken::class])->name('reserve');
+Route::post('/booking', BookingController::class)->middleware(OptionalBearerAuth::class)->name('booking');
 
 Route::post('/booking/webhook', StripeWebhookController::class)->name('booking.webhook');

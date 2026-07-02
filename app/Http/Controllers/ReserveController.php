@@ -19,7 +19,7 @@ final readonly class ReserveController
     {
         try {
             $reservation = $this->reserveSeats->execute(
-                $request->validated('user_id'),
+                $request->buyerId(),
                 $request->ticketIds(),
             );
         } catch (SeatUnavailableException $e) {

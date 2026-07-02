@@ -14,6 +14,7 @@ $overrides = [
     'DB_DATABASE' => ':memory:',
     'CACHE_STORE' => 'array',
     'LOG_CHANNEL' => 'stdout',
+    'MAIL_MAILER' => 'array',
 ];
 
 foreach ($overrides as $name => $value) {

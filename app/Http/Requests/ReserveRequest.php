@@ -16,10 +16,15 @@ final class ReserveRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => ['required', 'uuid'],
+            'user_id' => [$this->attributes->has('auth_user_id') ? 'nullable' : 'required', 'uuid'],
             'tickets' => ['required', 'array', 'min:1', 'max:10'],
             'tickets.*' => ['required', 'uuid', 'distinct'],
         ];
+    }
+
+    public function buyerId(): string
+    {
+        return (string) ($this->attributes->get('auth_user_id') ?? $this->validated('user_id'));
     }
 
     /** @return list<string> */

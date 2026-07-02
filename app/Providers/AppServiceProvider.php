@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Domain\Payment\PaymentGateway;
 use App\Infrastructure\Payment\StripePaymentGateway;
+use App\Services\AuthTokenVerifier;
 use App\Services\QueueTokenIssuer;
 use Illuminate\Contracts\Redis\Factory as Redis;
 use Illuminate\Database\Eloquent\Model;
@@ -20,6 +21,11 @@ final class AppServiceProvider extends ServiceProvider
 
         // Bind the domain port to its Stripe adapter (dependency inversion).
         $this->app->bind(PaymentGateway::class, StripePaymentGateway::class);
+
+        $this->app->singleton(AuthTokenVerifier::class, fn (): AuthTokenVerifier => new AuthTokenVerifier(
+            secret: (string) config('auth_token.secret'),
+            issuer: (string) config('auth_token.issuer'),
+        ));
 
         $this->app->singleton(QueueTokenIssuer::class, fn ($app): QueueTokenIssuer => new QueueTokenIssuer(
             redis: $app->make(Redis::class),

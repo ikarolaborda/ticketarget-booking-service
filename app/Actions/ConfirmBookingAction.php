@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Domain\Payment\PaymentGateway;
+use App\Mail\TicketsConfirmationMail;
 use App\Exceptions\ReservationInvalidException;
 use App\Models\Booking;
 use App\Models\Reservation;
 use App\Models\Ticket;
 use Illuminate\Database\ConnectionInterface;
+use Illuminate\Support\Facades\Mail;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
@@ -27,7 +29,7 @@ final readonly class ConfirmBookingAction
     ) {
     }
 
-    public function execute(string $reservationId, string $userId, string $paymentToken): Reservation
+    public function execute(string $reservationId, string $userId, string $paymentToken, string $email): Reservation
     {
         $reservation = Reservation::query()->find($reservationId);
 
@@ -45,7 +47,7 @@ final readonly class ConfirmBookingAction
         $payment = $this->payments->charge($amountInCents, 'brl', $paymentToken, $reservation->id);
 
         try {
-            return $this->db->transaction(function () use ($reservation, $ticketIds, $payment): Reservation {
+            $confirmed = $this->db->transaction(function () use ($reservation, $ticketIds, $payment, $email): Reservation {
                 $locked = Ticket::query()
                     ->whereIn('id', $ticketIds)
                     ->where('status', Ticket::STATUS_UNAVAILABLE)
@@ -62,6 +64,7 @@ final readonly class ConfirmBookingAction
                         'reservation_id' => $reservation->id,
                         'ticket_id' => $ticket->id,
                         'user_id' => $reservation->user_id,
+                        'email' => $email,
                         'charge_id' => $payment->chargeId,
                         'amount' => $ticket->price,
                     ]);
@@ -72,6 +75,10 @@ final readonly class ConfirmBookingAction
 
                 return $reservation->refresh();
             });
+
+            $this->sendTickets($confirmed, $email);
+
+            return $confirmed;
         } catch (Throwable $e) {
             // The charge succeeded but the booking could not be committed, so the
             // money must go back. Refunding here keeps the customer whole; the
@@ -84,6 +91,29 @@ final readonly class ConfirmBookingAction
             ]);
 
             throw $e;
+        }
+    }
+
+    /**
+     * The customer already paid: a mail outage must never fail the booking,
+     * so delivery problems are logged and absorbed here, after the commit.
+     */
+    private function sendTickets(Reservation $reservation, string $email): void
+    {
+        try {
+            $bookings = Booking::query()->where('reservation_id', $reservation->id)->get();
+            $seats = Ticket::query()
+                ->whereIn('id', $reservation->ticket_ids)
+                ->pluck('seat', 'id')
+                ->all();
+
+            Mail::to($email)->send(new TicketsConfirmationMail($reservation, $bookings, $seats));
+        } catch (Throwable $e) {
+            $this->logger->error('Ticket email failed after confirmed booking', [
+                'reservation_id' => $reservation->id,
+                'email' => $email,
+                'reason' => $e->getMessage(),
+            ]);
         }
     }
 
