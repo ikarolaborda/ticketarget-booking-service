@@ -6,6 +6,7 @@ use App\Http\Controllers\BookingController;
 use App\Http\Controllers\JoinQueueController;
 use App\Http\Controllers\MyBookingsController;
 use App\Http\Controllers\RefundBookingController;
+use App\Http\Controllers\ShowReservationController;
 use App\Http\Controllers\VerifyTicketController;
 use App\Http\Controllers\ReserveController;
 use App\Http\Controllers\StripeWebhookController;
@@ -21,6 +22,7 @@ Route::post('/reserve', ReserveController::class)->middleware([OptionalBearerAut
 Route::post('/booking', BookingController::class)->middleware(OptionalBearerAuth::class)->name('booking');
 Route::get('/booking/mine', MyBookingsController::class)->middleware(OptionalBearerAuth::class)->name('booking.mine');
 Route::get('/booking/verify', VerifyTicketController::class)->name('booking.verify');
+Route::get('/booking/reservation/{id}', ShowReservationController::class)->middleware(OptionalBearerAuth::class)->name('booking.reservation.show');
 Route::post('/booking/{booking}/refund', RefundBookingController::class)->middleware(OptionalBearerAuth::class)->name('booking.refund');
 
 Route::post('/booking/webhook', StripeWebhookController::class)->name('booking.webhook');
