@@ -44,6 +44,25 @@ abstract class BookingTestCase extends TestCase
         ]);
 
         $this->createTicketsTable();
+        $this->createEventsTable();
+    }
+
+    /**
+     * Event-service owns this table (shared data plane); admin analytics and
+     * the bookings feed join against it.
+     */
+    private function createEventsTable(): void
+    {
+        if (Schema::hasTable('events')) {
+            return;
+        }
+
+        Schema::create('events', function (Blueprint $table): void {
+            $table->uuid('id')->primary();
+            $table->string('name');
+            $table->timestampTz('date')->nullable();
+            $table->timestamps();
+        });
     }
 
     /**

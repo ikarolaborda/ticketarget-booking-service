@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\AdminBookingsController;
+use App\Http\Controllers\AdminStatsController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\JoinQueueController;
+use App\Http\Middleware\AdminBearerAuth;
 use App\Http\Controllers\MyBookingsController;
 use App\Http\Controllers\RefundBookingController;
 use App\Http\Controllers\ShowReservationController;
@@ -26,3 +29,9 @@ Route::get('/booking/reservation/{id}', ShowReservationController::class)->middl
 Route::post('/booking/{booking}/refund', RefundBookingController::class)->middleware(OptionalBearerAuth::class)->name('booking.refund');
 
 Route::post('/booking/webhook', StripeWebhookController::class)->name('booking.webhook');
+
+// Admin analytics — platform JWT with is_admin only (no Sanctum in this service).
+Route::middleware(AdminBearerAuth::class)->group(function (): void {
+    Route::get('/booking/admin/stats', AdminStatsController::class)->name('booking.admin.stats');
+    Route::get('/booking/admin/bookings', AdminBookingsController::class)->name('booking.admin.bookings');
+});

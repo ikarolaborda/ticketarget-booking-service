@@ -18,7 +18,7 @@ final readonly class AuthTokenVerifier
     }
 
     /**
-     * @return array{sub: string, email: string, name: string}|null claims, or null when invalid
+     * @return array{sub: string, email: string, name: string, is_admin: bool}|null claims, or null when invalid
      */
     public function verify(string $token): ?array
     {
@@ -53,7 +53,14 @@ final readonly class AuthTokenVerifier
             return null;
         }
 
-        return ['sub' => $claims['sub'], 'email' => $claims['email'], 'name' => $claims['name']];
+        // Tokens minted before the admin rollout carry no is_admin claim;
+        // they are plain customers, never admins.
+        return [
+            'sub' => $claims['sub'],
+            'email' => $claims['email'],
+            'name' => $claims['name'],
+            'is_admin' => ($claims['is_admin'] ?? null) === true,
+        ];
     }
 
     private function base64UrlEncode(string $value): string
