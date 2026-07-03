@@ -16,9 +16,10 @@ final class Ticket extends Model
     use HasUuids;
 
     public const string STATUS_AVAILABLE = 'available';
-    public const string STATUS_UNAVAILABLE = 'unavailable';
-    public const string STATUS_BOOKED = 'booked';
 
+    public const string STATUS_UNAVAILABLE = 'unavailable';
+
+    public const string STATUS_BOOKED = 'booked';
 
     protected function casts(): array
     {

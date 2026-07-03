@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Logging\CreateKafkaLogger;
+use Monolog\Handler\StreamHandler;
 use Monolog\Level;
 
 return [
@@ -20,7 +21,7 @@ return [
         ],
         'stdout' => [
             'driver' => 'monolog',
-            'handler' => Monolog\Handler\StreamHandler::class,
+            'handler' => StreamHandler::class,
             'with' => ['stream' => 'php://stdout'],
             'level' => env('LOG_LEVEL', 'debug'),
         ],

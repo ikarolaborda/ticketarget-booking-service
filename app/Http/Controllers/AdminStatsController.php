@@ -20,7 +20,9 @@ use Illuminate\Support\Facades\DB;
 final readonly class AdminStatsController
 {
     private const array RECOGNIZED = [Booking::STATUS_PAID, Booking::STATUS_REFUND_PENDING];
+
     private const int SERIES_DAYS = 14;
+
     private const int TOP_EVENTS = 8;
 
     public function __invoke(): JsonResponse

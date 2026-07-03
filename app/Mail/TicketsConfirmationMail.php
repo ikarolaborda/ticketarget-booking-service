@@ -14,7 +14,7 @@ use Illuminate\Support\Collection;
 final class TicketsConfirmationMail extends Mailable
 {
     /**
-     * @param Collection<int, Booking> $bookings
+     * @param  Collection<int, Booking>  $bookings
      */
     public function __construct(
         public readonly Reservation $reservation,
@@ -23,8 +23,7 @@ final class TicketsConfirmationMail extends Mailable
         public readonly array $seats,
         /** @var array<string, string> booking id => signed entry code */
         public readonly array $codes = [],
-    ) {
-    }
+    ) {}
 
     public function envelope(): Envelope
     {
@@ -49,7 +48,7 @@ final class TicketsConfirmationMail extends Mailable
             ."Your seats:\n{$lines}\n\n"
             .sprintf("Total paid: R$ %.2f\n\n", $total)
             ."Present this email at the venue entrance. Enjoy the show!\n"
-            ."— Ticketarget";
+            .'— Ticketarget';
 
         return new Content(htmlString: nl2br(e($text)));
     }

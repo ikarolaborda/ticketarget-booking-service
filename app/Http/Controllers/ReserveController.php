@@ -12,9 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 final readonly class ReserveController
 {
-    public function __construct(private ReserveSeatsAction $reserveSeats)
-    {
-    }
+    public function __construct(private ReserveSeatsAction $reserveSeats) {}
 
     public function __invoke(ReserveRequest $request): JsonResponse
     {

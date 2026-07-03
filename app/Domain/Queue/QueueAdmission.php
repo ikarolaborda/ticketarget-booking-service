@@ -10,8 +10,7 @@ final readonly class QueueAdmission
         public bool $admitted,
         public ?string $token,
         public int $expiresAt,
-    ) {
-    }
+    ) {}
 
     public static function waiting(): self
     {

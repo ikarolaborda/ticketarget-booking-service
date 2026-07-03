@@ -12,9 +12,10 @@ final class Booking extends Model
     use HasUuids;
 
     public const string STATUS_PAID = 'paid';
-    public const string STATUS_REFUND_PENDING = 'refund_pending';
-    public const string STATUS_REFUNDED = 'refunded';
 
+    public const string STATUS_REFUND_PENDING = 'refund_pending';
+
+    public const string STATUS_REFUNDED = 'refunded';
 
     protected function casts(): array
     {

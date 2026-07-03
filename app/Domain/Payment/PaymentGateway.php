@@ -11,7 +11,8 @@ namespace App\Domain\Payment;
 interface PaymentGateway
 {
     /**
-     * @param int $amountInCents total to charge
+     * @param  int  $amountInCents  total to charge
+     *
      * @throws PaymentException when the charge cannot be completed
      */
     public function charge(int $amountInCents, string $currency, string $paymentToken, string $idempotencyKey): PaymentResult;

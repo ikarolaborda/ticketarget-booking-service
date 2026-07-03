@@ -6,6 +6,4 @@ namespace App\Exceptions;
 
 use RuntimeException;
 
-final class ReservationInvalidException extends RuntimeException
-{
-}
+final class ReservationInvalidException extends RuntimeException {}

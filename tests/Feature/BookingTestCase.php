@@ -93,7 +93,7 @@ abstract class BookingTestCase extends TestCase
         string $seat = 'A01',
         string $price = '50.00',
     ): Ticket {
-        $ticket = new Ticket();
+        $ticket = new Ticket;
         $ticket->event_id = (string) Str::uuid();
         $ticket->seat = $seat;
         $ticket->price = $price;
@@ -105,14 +105,14 @@ abstract class BookingTestCase extends TestCase
     }
 
     /**
-     * @param list<string> $ticketIds
+     * @param  list<string>  $ticketIds
      */
     protected function createHeldReservation(
         string $userId,
         array $ticketIds,
         ?CarbonInterface $expiresAt = null,
     ): Reservation {
-        $reservation = new Reservation();
+        $reservation = new Reservation;
         $reservation->user_id = $userId;
         $reservation->ticket_ids = $ticketIds;
         $reservation->status = Reservation::STATUS_HELD;

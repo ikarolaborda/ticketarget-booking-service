@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Models\Booking;
 use App\Models\Ticket;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 final class AdminStatsTest extends BookingTestCase
@@ -115,7 +116,7 @@ final class AdminStatsTest extends BookingTestCase
 
     private function seedBooking(string $amount, string $status, Carbon $createdAt, ?string $ticketId = null): Booking
     {
-        $booking = new Booking();
+        $booking = new Booking;
         $booking->reservation_id = (string) Str::uuid();
         $booking->ticket_id = $ticketId ?? (string) Str::uuid();
         $booking->user_id = (string) Str::uuid();
@@ -134,7 +135,7 @@ final class AdminStatsTest extends BookingTestCase
     {
         $id = (string) Str::uuid();
 
-        \Illuminate\Support\Facades\DB::table('events')->insert([
+        DB::table('events')->insert([
             'id' => $id,
             'name' => $name,
             'date' => now()->addMonth(),
@@ -147,7 +148,7 @@ final class AdminStatsTest extends BookingTestCase
 
     private function seedEventTicket(string $eventId, string $seat): string
     {
-        $ticket = new Ticket();
+        $ticket = new Ticket;
         $ticket->event_id = $eventId;
         $ticket->seat = $seat;
         $ticket->price = '80.00';

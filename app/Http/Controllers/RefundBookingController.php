@@ -13,9 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 final readonly class RefundBookingController
 {
-    public function __construct(private RefundBookingAction $refund)
-    {
-    }
+    public function __construct(private RefundBookingAction $refund) {}
 
     public function __invoke(Request $request, string $booking): JsonResponse
     {

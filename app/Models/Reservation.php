@@ -12,9 +12,10 @@ final class Reservation extends Model
     use HasUuids;
 
     public const string STATUS_HELD = 'held';
-    public const string STATUS_CONFIRMED = 'confirmed';
-    public const string STATUS_RELEASED = 'released';
 
+    public const string STATUS_CONFIRMED = 'confirmed';
+
+    public const string STATUS_RELEASED = 'released';
 
     protected function casts(): array
     {

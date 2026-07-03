@@ -14,8 +14,7 @@ final readonly class AuthTokenVerifier
     public function __construct(
         private string $secret,
         private string $issuer,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{sub: string, email: string, name: string, is_admin: bool}|null claims, or null when invalid

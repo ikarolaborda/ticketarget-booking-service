@@ -90,7 +90,7 @@ final class AdminBookingsTest extends BookingTestCase
 
     private function seedBooking(string $amount, Carbon $createdAt, ?string $ticketId = null): Booking
     {
-        $booking = new Booking();
+        $booking = new Booking;
         $booking->reservation_id = (string) Str::uuid();
         $booking->ticket_id = $ticketId ?? (string) Str::uuid();
         $booking->user_id = (string) Str::uuid();

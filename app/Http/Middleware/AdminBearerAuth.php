@@ -15,9 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final readonly class AdminBearerAuth
 {
-    public function __construct(private AuthTokenVerifier $tokens)
-    {
-    }
+    public function __construct(private AuthTokenVerifier $tokens) {}
 
     public function handle(Request $request, Closure $next): Response
     {

@@ -11,9 +11,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 final readonly class JoinQueueController
 {
-    public function __construct(private QueueTokenIssuer $issuer)
-    {
-    }
+    public function __construct(private QueueTokenIssuer $issuer) {}
 
     public function __invoke(JoinQueueRequest $request): JsonResponse
     {

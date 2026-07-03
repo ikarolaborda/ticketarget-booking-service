@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Models\Booking;
 use App\Models\Ticket;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -42,7 +43,7 @@ final class MyBookingsTest extends BookingTestCase
         $other = (string) Str::uuid();
         $eventId = (string) Str::uuid();
 
-        \Illuminate\Support\Facades\DB::table('events')->insert([
+        DB::table('events')->insert([
             'id' => $eventId,
             'name' => 'Big Show',
             'date' => now()->addMonth(),
@@ -75,7 +76,7 @@ final class MyBookingsTest extends BookingTestCase
         $mine = (string) Str::uuid();
 
         // Booking whose ticket row vanished (orphan): must not 500.
-        $booking = new Booking();
+        $booking = new Booking;
         $booking->reservation_id = (string) Str::uuid();
         $booking->ticket_id = (string) Str::uuid();
         $booking->user_id = $mine;
@@ -97,10 +98,10 @@ final class MyBookingsTest extends BookingTestCase
     {
         $ticket = $this->createTicket(Ticket::STATUS_BOOKED, $seat);
         $ticket->timestamps = false;
-        \Illuminate\Support\Facades\DB::table('tickets')->where('id', $ticket->id)->update(['event_id' => $eventId]);
+        DB::table('tickets')->where('id', $ticket->id)->update(['event_id' => $eventId]);
 
         $reservationId = (string) Str::uuid();
-        \Illuminate\Support\Facades\DB::table('bookings')->insert([
+        DB::table('bookings')->insert([
             'id' => (string) Str::uuid(),
             'reservation_id' => $reservationId,
             'ticket_id' => $ticket->id,

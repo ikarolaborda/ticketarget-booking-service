@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Domain\Payment\PaymentGateway;
 use App\Models\Booking;
 use App\Models\Ticket;
+use App\Services\TicketCodeIssuer;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -24,7 +25,7 @@ final class RefundTest extends BookingTestCase
     {
         parent::setUp();
 
-        $this->gateway = new FakePaymentGateway();
+        $this->gateway = new FakePaymentGateway;
         $this->app->instance(PaymentGateway::class, $this->gateway);
 
         if (! Schema::hasTable('events')) {
@@ -95,7 +96,7 @@ final class RefundTest extends BookingTestCase
             ->assertStatus(403);
 
         // Guest with the ticket's signed entry code succeeds.
-        $code = app(\App\Services\TicketCodeIssuer::class)->issue($bookingId);
+        $code = app(TicketCodeIssuer::class)->issue($bookingId);
         $this->postJson('/booking/'.$bookingId.'/refund', ['code' => $code])->assertOk();
     }
 

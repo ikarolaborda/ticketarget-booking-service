@@ -16,9 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final readonly class VerifyQueueController
 {
-    public function __construct(private QueueTokenIssuer $issuer)
-    {
-    }
+    public function __construct(private QueueTokenIssuer $issuer) {}
 
     public function __invoke(Request $request): JsonResponse
     {

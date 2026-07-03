@@ -15,9 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final readonly class RequireQueueToken
 {
-    public function __construct(private QueueTokenIssuer $issuer)
-    {
-    }
+    public function __construct(private QueueTokenIssuer $issuer) {}
 
     public function handle(Request $request, Closure $next): Response
     {

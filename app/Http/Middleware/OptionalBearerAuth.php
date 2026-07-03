@@ -16,9 +16,7 @@ use Symfony\Component\HttpFoundation\Response;
  */
 final readonly class OptionalBearerAuth
 {
-    public function __construct(private AuthTokenVerifier $tokens)
-    {
-    }
+    public function __construct(private AuthTokenVerifier $tokens) {}
 
     public function handle(Request $request, Closure $next): Response
     {

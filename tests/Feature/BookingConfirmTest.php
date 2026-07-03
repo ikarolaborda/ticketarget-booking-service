@@ -20,7 +20,7 @@ final class BookingConfirmTest extends BookingTestCase
     {
         parent::setUp();
 
-        $this->gateway = new FakePaymentGateway();
+        $this->gateway = new FakePaymentGateway;
         $this->app->instance(PaymentGateway::class, $this->gateway);
 
         Mail::fake();

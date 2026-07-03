@@ -10,8 +10,8 @@ use Illuminate\Http\Request;
 use Psr\Log\LoggerInterface;
 use Stripe\Exception\SignatureVerificationException;
 use Stripe\Webhook;
-use UnexpectedValueException;
 use Symfony\Component\HttpFoundation\Response;
+use UnexpectedValueException;
 
 /**
  * Receives Stripe events and reconciles them against local state. The signature
@@ -23,8 +23,7 @@ final readonly class StripeWebhookController
     public function __construct(
         private LoggerInterface $logger,
         private ReconcileRefundAction $reconcileRefund,
-    ) {
-    }
+    ) {}
 
     public function __invoke(Request $request): JsonResponse
     {
@@ -36,7 +35,7 @@ final readonly class StripeWebhookController
                 (string) $request->header('Stripe-Signature', ''),
                 $secret,
             );
-        } catch (UnexpectedValueException | SignatureVerificationException $e) {
+        } catch (UnexpectedValueException|SignatureVerificationException $e) {
             return response()->json(['message' => 'Invalid signature'], Response::HTTP_BAD_REQUEST);
         }
 

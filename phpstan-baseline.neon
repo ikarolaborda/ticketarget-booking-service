@@ -1,0 +1,133 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Access to an undefined property App\\Models\\Ticket\:\:\$price\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/ConfirmBookingAction.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Ticket\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/ConfirmBookingAction.php
+
+		-
+			message: '#^Parameter \#1 \$ticketIds of method App\\Actions\\ConfirmBookingAction\:\:totalInCents\(\) expects list\<string\>, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/ConfirmBookingAction.php
+
+		-
+			message: '#^Parameter \#1 \$value of function count expects array\|Countable, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Actions/ConfirmBookingAction.php
+
+		-
+			message: '#^Property App\\Models\\Booking\:\:\$ticket_id \(string\) does not accept int\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: app/Actions/ConfirmBookingAction.php
+
+		-
+			message: '#^Call to an undefined method Illuminate\\Contracts\\Cache\\Repository\:\:lock\(\)\.$#'
+			identifier: method.notFound
+			count: 1
+			path: app/Actions/ReserveSeatsAction.php
+
+		-
+			message: '#^Property App\\Models\\Reservation\:\:\$expires_at \(string\|null\) does not accept Illuminate\\Support\\Carbon\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: app/Actions/ReserveSeatsAction.php
+
+		-
+			message: '#^Property App\\Models\\Reservation\:\:\$ticket_ids \(string\) does not accept list\<string\>\.$#'
+			identifier: assign.propertyType
+			count: 1
+			path: app/Actions/ReserveSeatsAction.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Booking\:\:\$booking_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/MyBookingsController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Booking\:\:\$ticket_code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/MyBookingsController.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/ReserveController.php
+
+		-
+			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Http/Controllers/ShowReservationController.php
+
+		-
+			message: '#^Access to an undefined property Stripe\\StripeObject\:\:\$object\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/StripeWebhookController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Booking\:\:\$event_date\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/VerifyTicketController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Booking\:\:\$event_name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/VerifyTicketController.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Booking\:\:\$seat\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/VerifyTicketController.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\BookingRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/BookingRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\JoinQueueRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/JoinQueueRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\ReserveRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/ReserveRequest.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\ShowReservationRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Http/Requests/ShowReservationRequest.php
+
+		-
+			message: '#^Method App\\Logging\\CreateKafkaLogger\:\:__invoke\(\) has parameter \$config with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: app/Logging/CreateKafkaLogger.php
+
+		-
+			message: '#^Cannot call method isPast\(\) on string\.$#'
+			identifier: method.nonObject
+			count: 1
+			path: app/Models/Reservation.php

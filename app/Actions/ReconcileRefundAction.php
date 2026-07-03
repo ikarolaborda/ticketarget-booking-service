@@ -21,8 +21,7 @@ final readonly class ReconcileRefundAction
     public function __construct(
         private ConnectionInterface $db,
         private LoggerInterface $logger,
-    ) {
-    }
+    ) {}
 
     public function execute(string $paymentIntentId, int $amountRefunded, int $chargeAmount): void
     {

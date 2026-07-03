@@ -12,9 +12,7 @@ use Stripe\StripeClient;
 
 final readonly class StripePaymentGateway implements PaymentGateway
 {
-    public function __construct(private StripeClient $stripe)
-    {
-    }
+    public function __construct(private StripeClient $stripe) {}
 
     public function charge(int $amountInCents, string $currency, string $paymentToken, string $idempotencyKey): PaymentResult
     {

@@ -27,17 +27,17 @@ use Psr\Log\LoggerInterface;
 final readonly class ReserveSeatsAction
 {
     private const int LOCK_SECONDS = 15;
+
     private const int HOLD_MINUTES = 10;
 
     public function __construct(
         private ConnectionInterface $db,
         private CacheFactory $cache,
         private LoggerInterface $logger,
-    ) {
-    }
+    ) {}
 
     /**
-     * @param list<string> $ticketIds
+     * @param  list<string>  $ticketIds
      */
     public function execute(string $userId, array $ticketIds): Reservation
     {
@@ -55,14 +55,14 @@ final readonly class ReserveSeatsAction
                     ->get();
 
                 if ($held->count() !== count($ticketIds)) {
-                    throw new SeatUnavailableException();
+                    throw new SeatUnavailableException;
                 }
 
                 Ticket::query()
                     ->whereIn('id', $ticketIds)
                     ->update(['status' => Ticket::STATUS_UNAVAILABLE]);
 
-                $reservation = new Reservation();
+                $reservation = new Reservation;
                 $reservation->user_id = $userId;
                 $reservation->ticket_ids = $ticketIds;
                 $reservation->status = Reservation::STATUS_HELD;
@@ -79,7 +79,7 @@ final readonly class ReserveSeatsAction
     }
 
     /**
-     * @param list<string> $ticketIds
+     * @param  list<string>  $ticketIds
      * @return list<Lock>
      */
     private function acquireLocks(array $ticketIds): array

@@ -21,8 +21,7 @@ final readonly class QueueTokenIssuer
         private string $secret,
         private int $ttlSeconds,
         private int $admissionCap,
-    ) {
-    }
+    ) {}
 
     public function admit(string $userId, string $eventId): QueueAdmission
     {

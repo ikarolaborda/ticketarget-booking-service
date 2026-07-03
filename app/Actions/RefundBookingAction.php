@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Domain\Payment\PaymentException;
 use App\Domain\Payment\PaymentGateway;
 use App\Exceptions\RefundNotAllowedException;
 use App\Models\Booking;
 use App\Services\TicketCodeIssuer;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Facades\DB;
 use Psr\Log\LoggerInterface;
@@ -21,6 +23,7 @@ use Symfony\Component\HttpFoundation\Response;
 final readonly class RefundBookingAction
 {
     private const int FULL_REFUND_MIN_HOURS = 168;
+
     private const int HALF_REFUND_MIN_HOURS = 48;
 
     public function __construct(
@@ -28,8 +31,7 @@ final readonly class RefundBookingAction
         private PaymentGateway $payments,
         private TicketCodeIssuer $codes,
         private LoggerInterface $logger,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{refund_tier: int, amount_cents: int}
@@ -70,7 +72,7 @@ final readonly class RefundBookingAction
 
         try {
             $this->payments->refund($booking->charge_id, $amountCents, 'refund:'.$bookingId);
-        } catch (\App\Domain\Payment\PaymentException $e) {
+        } catch (PaymentException $e) {
             // Guarded reversion: the webhook may already have completed the
             // refund despite the API error, so only revert if still pending.
             Booking::query()
@@ -113,7 +115,7 @@ final readonly class RefundBookingAction
             throw new RefundNotAllowedException('This booking cannot be refunded automatically.', Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $hoursUntilEvent = now()->diffInMinutes(\Carbon\CarbonImmutable::parse($eventDate), false) / 60;
+        $hoursUntilEvent = now()->diffInMinutes(CarbonImmutable::parse($eventDate), false) / 60;
 
         if ($hoursUntilEvent >= self::FULL_REFUND_MIN_HOURS) {
             return 1.0;

@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Domain\Payment\PaymentGateway;
-use App\Mail\TicketsConfirmationMail;
 use App\Exceptions\ReservationInvalidException;
+use App\Mail\TicketsConfirmationMail;
 use App\Models\Booking;
 use App\Models\Reservation;
 use App\Models\Ticket;
+use App\Services\TicketCodeIssuer;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Facades\Mail;
 use Psr\Log\LoggerInterface;
@@ -26,8 +27,7 @@ final readonly class ConfirmBookingAction
         private ConnectionInterface $db,
         private PaymentGateway $payments,
         private LoggerInterface $logger,
-    ) {
-    }
+    ) {}
 
     public function execute(string $reservationId, string $userId, string $paymentToken, string $email): Reservation
     {
@@ -62,7 +62,7 @@ final readonly class ConfirmBookingAction
                     $ticket->status = Ticket::STATUS_BOOKED;
                     $ticket->save();
 
-                    $booking = new Booking();
+                    $booking = new Booking;
                     $booking->status = Booking::STATUS_PAID;
                     $booking->reservation_id = $reservation->id;
                     $booking->ticket_id = $ticket->id;
@@ -111,7 +111,7 @@ final readonly class ConfirmBookingAction
                 ->pluck('seat', 'id')
                 ->all();
 
-            $codes = app(\App\Services\TicketCodeIssuer::class);
+            $codes = app(TicketCodeIssuer::class);
             $entryCodes = $bookings->mapWithKeys(
                 fn (Booking $booking) => [$booking->id => $codes->issue($booking->id)],
             )->all();
@@ -127,7 +127,7 @@ final readonly class ConfirmBookingAction
     }
 
     /**
-     * @param list<string> $ticketIds
+     * @param  list<string>  $ticketIds
      */
     private function totalInCents(array $ticketIds): int
     {

@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Models\Booking;
 use App\Models\Ticket;
+use App\Services\TicketCodeIssuer;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -96,7 +97,7 @@ final class RefundReconcileTest extends BookingTestCase
     public function test_a_refunded_ticket_no_longer_verifies(): void
     {
         [$bookingId] = $this->booking('pi_rc_6', Booking::STATUS_REFUNDED);
-        $code = app(\App\Services\TicketCodeIssuer::class)->issue($bookingId);
+        $code = app(TicketCodeIssuer::class)->issue($bookingId);
 
         $this->getJson('/booking/verify?code='.urlencode($code))
             ->assertOk()

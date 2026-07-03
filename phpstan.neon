@@ -1,4 +1,6 @@
+# Baseline holds pre-adoption inference debt only — new errors still fail.
 includes:
+    - phpstan-baseline.neon
     - vendor/larastan/larastan/extension.neon
 
 parameters:

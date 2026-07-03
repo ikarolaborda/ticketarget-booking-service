@@ -21,6 +21,7 @@ final class FakePaymentGateway implements PaymentGateway
     public array $refunds = [];
 
     public bool $failCharge = false;
+
     public bool $failRefund = false;
 
     public function charge(int $amountInCents, string $currency, string $paymentToken, string $idempotencyKey): PaymentResult

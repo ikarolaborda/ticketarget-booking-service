@@ -19,6 +19,7 @@ use Psr\Log\LoggerInterface;
 final class ReleaseExpiredReservations extends Command
 {
     protected $signature = 'booking:release-expired {--limit=500}';
+
     protected $description = 'Release seats from expired, still-held reservations';
 
     public function handle(ConnectionInterface $db, LoggerInterface $logger): int

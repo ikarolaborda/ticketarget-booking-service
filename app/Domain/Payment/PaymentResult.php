@@ -10,6 +10,5 @@ final readonly class PaymentResult
         public string $chargeId,
         public int $amountInCents,
         public string $currency,
-    ) {
-    }
+    ) {}
 }

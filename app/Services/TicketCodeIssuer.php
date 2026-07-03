@@ -11,9 +11,7 @@ namespace App\Services;
  */
 final readonly class TicketCodeIssuer
 {
-    public function __construct(private string $secret)
-    {
-    }
+    public function __construct(private string $secret) {}
 
     public function issue(string $bookingId): string
     {

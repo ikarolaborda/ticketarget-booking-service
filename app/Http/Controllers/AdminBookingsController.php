@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 final readonly class AdminBookingsController
 {
     private const int DEFAULT_LIMIT = 25;
+
     private const int MAX_LIMIT = 100;
 
     public function __invoke(Request $request): JsonResponse

@@ -12,9 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 final readonly class MyBookingsController
 {
-    public function __construct(private TicketCodeIssuer $codes)
-    {
-    }
+    public function __construct(private TicketCodeIssuer $codes) {}
 
     public function __invoke(Request $request): JsonResponse
     {
