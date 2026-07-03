@@ -62,12 +62,14 @@ final readonly class ReserveSeatsAction
                     ->whereIn('id', $ticketIds)
                     ->update(['status' => Ticket::STATUS_UNAVAILABLE]);
 
-                return Reservation::query()->create([
-                    'user_id' => $userId,
-                    'ticket_ids' => $ticketIds,
-                    'status' => Reservation::STATUS_HELD,
-                    'expires_at' => now()->addMinutes(self::HOLD_MINUTES),
-                ]);
+                $reservation = new Reservation();
+                $reservation->user_id = $userId;
+                $reservation->ticket_ids = $ticketIds;
+                $reservation->status = Reservation::STATUS_HELD;
+                $reservation->expires_at = now()->addMinutes(self::HOLD_MINUTES);
+                $reservation->save();
+
+                return $reservation;
             });
         } finally {
             foreach ($locks as $lock) {

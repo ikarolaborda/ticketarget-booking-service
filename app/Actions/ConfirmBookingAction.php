@@ -59,19 +59,22 @@ final readonly class ConfirmBookingAction
                 }
 
                 foreach ($locked as $ticket) {
-                    $ticket->update(['status' => Ticket::STATUS_BOOKED]);
-                    Booking::query()->create([
-                        'status' => Booking::STATUS_PAID,
-                        'reservation_id' => $reservation->id,
-                        'ticket_id' => $ticket->id,
-                        'user_id' => $reservation->user_id,
-                        'email' => $email,
-                        'charge_id' => $payment->chargeId,
-                        'amount' => $ticket->price,
-                    ]);
+                    $ticket->status = Ticket::STATUS_BOOKED;
+                    $ticket->save();
+
+                    $booking = new Booking();
+                    $booking->status = Booking::STATUS_PAID;
+                    $booking->reservation_id = $reservation->id;
+                    $booking->ticket_id = $ticket->id;
+                    $booking->user_id = $reservation->user_id;
+                    $booking->email = $email;
+                    $booking->charge_id = $payment->chargeId;
+                    $booking->amount = $ticket->price;
+                    $booking->save();
                 }
 
-                $reservation->update(['status' => Reservation::STATUS_CONFIRMED]);
+                $reservation->status = Reservation::STATUS_CONFIRMED;
+                $reservation->save();
                 $this->logger->info('Booking confirmed', ['reservation_id' => $reservation->id, 'charge_id' => $payment->chargeId]);
 
                 return $reservation->refresh();

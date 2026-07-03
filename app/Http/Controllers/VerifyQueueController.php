@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Services\QueueTokenIssuer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Traefik forward-auth target. Traefik replays the original request's headers
@@ -24,7 +25,7 @@ final readonly class VerifyQueueController
         $token = (string) $request->headers->get('X-Queue-Token', '');
 
         if ($token === '' || ! $this->issuer->isValid($token)) {
-            return response()->json(['message' => 'Queue token missing or invalid'], 403);
+            return response()->json(['message' => 'Queue token missing or invalid'], Response::HTTP_FORBIDDEN);
         }
 
         return response()->json(['status' => 'ok'])->header('X-Queue-Token', $token);

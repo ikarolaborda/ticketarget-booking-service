@@ -8,6 +8,7 @@ use App\Models\Booking;
 use App\Services\TicketCodeIssuer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 final readonly class MyBookingsController
 {
@@ -22,7 +23,7 @@ final readonly class MyBookingsController
         $userId = $request->attributes->get('auth_user_id');
 
         if ($userId === null) {
-            return response()->json(['message' => 'Unauthenticated.'], 401);
+            return response()->json(['message' => 'Unauthenticated.'], Response::HTTP_UNAUTHORIZED);
         }
 
         $rows = Booking::query()

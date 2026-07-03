@@ -15,7 +15,6 @@ final class Reservation extends Model
     public const string STATUS_CONFIRMED = 'confirmed';
     public const string STATUS_RELEASED = 'released';
 
-    protected $fillable = ['user_id', 'ticket_ids', 'status', 'expires_at'];
 
     protected function casts(): array
     {

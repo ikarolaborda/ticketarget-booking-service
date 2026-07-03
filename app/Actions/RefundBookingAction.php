@@ -11,6 +11,7 @@ use App\Services\TicketCodeIssuer;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Support\Facades\DB;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Marks a booking refund_pending under the policy tiers and asks Stripe for the
@@ -39,14 +40,14 @@ final readonly class RefundBookingAction
 
         // Uniform 403 whether the booking is missing or simply not theirs.
         if ($booking === null || ! $this->authorized($booking, $authUserId, $entryCode)) {
-            throw new RefundNotAllowedException('You cannot refund this booking.', 403);
+            throw new RefundNotAllowedException('You cannot refund this booking.', Response::HTTP_FORBIDDEN);
         }
 
         [$tier, $amountCents] = $this->db->transaction(function () use ($bookingId): array {
             $booking = Booking::query()->lockForUpdate()->findOrFail($bookingId);
 
             if ($booking->status !== Booking::STATUS_PAID) {
-                throw new RefundNotAllowedException('This booking is not refundable (already refunded or in progress).', 409);
+                throw new RefundNotAllowedException('This booking is not refundable (already refunded or in progress).', Response::HTTP_CONFLICT);
             }
 
             $eventDate = DB::table('tickets')
@@ -109,7 +110,7 @@ final readonly class RefundBookingAction
     private function tierFor(?string $eventDate): float
     {
         if ($eventDate === null) {
-            throw new RefundNotAllowedException('This booking cannot be refunded automatically.', 422);
+            throw new RefundNotAllowedException('This booking cannot be refunded automatically.', Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $hoursUntilEvent = now()->diffInMinutes(\Carbon\CarbonImmutable::parse($eventDate), false) / 60;
@@ -122,6 +123,6 @@ final readonly class RefundBookingAction
             return 0.5;
         }
 
-        throw new RefundNotAllowedException('Refunds close 48 hours before the event.', 422);
+        throw new RefundNotAllowedException('Refunds close 48 hours before the event.', Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 }

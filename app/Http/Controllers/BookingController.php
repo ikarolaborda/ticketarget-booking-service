@@ -9,6 +9,7 @@ use App\Domain\Payment\PaymentException;
 use App\Exceptions\ReservationInvalidException;
 use App\Http\Requests\BookingRequest;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 final readonly class BookingController
 {
@@ -26,14 +27,14 @@ final readonly class BookingController
                 $request->buyerEmail(),
             );
         } catch (ReservationInvalidException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
+            return response()->json(['message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
         } catch (PaymentException $e) {
-            return response()->json(['message' => 'Payment failed', 'detail' => $e->getMessage()], 402);
+            return response()->json(['message' => 'Payment failed', 'detail' => $e->getMessage()], Response::HTTP_PAYMENT_REQUIRED);
         }
 
         return response()->json([
             'reservation_id' => $reservation->id,
             'status' => $reservation->status,
-        ], 201);
+        ], Response::HTTP_CREATED);
     }
 }

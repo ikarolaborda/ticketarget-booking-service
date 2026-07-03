@@ -9,6 +9,7 @@ use App\Domain\Payment\PaymentException;
 use App\Exceptions\RefundNotAllowedException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 final readonly class RefundBookingController
 {
@@ -27,7 +28,7 @@ final readonly class RefundBookingController
         } catch (RefundNotAllowedException $e) {
             return response()->json(['message' => $e->getMessage()], $e->status);
         } catch (PaymentException) {
-            return response()->json(['message' => 'The refund could not be processed. Please try again.'], 402);
+            return response()->json(['message' => 'The refund could not be processed. Please try again.'], Response::HTTP_PAYMENT_REQUIRED);
         }
 
         return response()->json([

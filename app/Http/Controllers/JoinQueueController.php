@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\JoinQueueRequest;
 use App\Services\QueueTokenIssuer;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 final readonly class JoinQueueController
 {
@@ -22,7 +23,7 @@ final readonly class JoinQueueController
         );
 
         if (! $admission->admitted) {
-            return response()->json(['status' => 'waiting'], 503)
+            return response()->json(['status' => 'waiting'], Response::HTTP_SERVICE_UNAVAILABLE)
                 ->header('Retry-After', '10');
         }
 

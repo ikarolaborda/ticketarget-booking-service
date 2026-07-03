@@ -13,6 +13,10 @@ return [
             'driver' => 'custom',
             'via' => CreateKafkaLogger::class,
             'level' => env('LOG_LEVEL', 'debug'),
+            'service' => env('APP_NAME', 'booking-service'),
+            'environment' => env('APP_ENV', 'production'),
+            'brokers' => env('KAFKA_BROKERS', ''),
+            'topic' => env('KAFKA_LOG_TOPIC', 'logs.app'),
         ],
         'stdout' => [
             'driver' => 'monolog',

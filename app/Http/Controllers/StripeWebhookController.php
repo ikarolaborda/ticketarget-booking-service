@@ -11,6 +11,7 @@ use Psr\Log\LoggerInterface;
 use Stripe\Exception\SignatureVerificationException;
 use Stripe\Webhook;
 use UnexpectedValueException;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Receives Stripe events and reconciles them against local state. The signature
@@ -36,7 +37,7 @@ final readonly class StripeWebhookController
                 $secret,
             );
         } catch (UnexpectedValueException | SignatureVerificationException $e) {
-            return response()->json(['message' => 'Invalid signature'], 400);
+            return response()->json(['message' => 'Invalid signature'], Response::HTTP_BAD_REQUEST);
         }
 
         $this->logger->info('Stripe webhook received', ['type' => $event->type, 'event_id' => $event->id]);

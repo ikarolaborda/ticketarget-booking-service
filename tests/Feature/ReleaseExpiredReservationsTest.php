@@ -55,7 +55,9 @@ final class ReleaseExpiredReservationsTest extends BookingTestCase
 
         // Rebook the seat between runs: the second sweep must not release it
         // again because the reservation is no longer held.
-        $ticket->refresh()->update(['status' => Ticket::STATUS_BOOKED]);
+        $ticket->refresh();
+        $ticket->status = Ticket::STATUS_BOOKED;
+        $ticket->save();
 
         $this->artisan('booking:release-expired')->assertSuccessful();
 

@@ -8,6 +8,7 @@ use App\Http\Requests\ShowReservationRequest;
 use App\Models\Reservation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Rehydration endpoint: lets a browser that lost its in-memory cart (hard
@@ -22,7 +23,7 @@ final readonly class ShowReservationController
 
         // Unknown id and foreign owner are indistinguishable on purpose.
         if ($reservation === null || $reservation->user_id !== $request->buyerId()) {
-            return response()->json(['message' => 'Not found.'], 404);
+            return response()->json(['message' => 'Not found.'], Response::HTTP_NOT_FOUND);
         }
 
         // The sweeper may not have run yet; never report a dead hold as live.

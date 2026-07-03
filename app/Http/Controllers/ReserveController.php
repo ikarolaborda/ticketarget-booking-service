@@ -8,6 +8,7 @@ use App\Actions\ReserveSeatsAction;
 use App\Exceptions\SeatUnavailableException;
 use App\Http\Requests\ReserveRequest;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 final readonly class ReserveController
 {
@@ -23,13 +24,13 @@ final readonly class ReserveController
                 $request->ticketIds(),
             );
         } catch (SeatUnavailableException $e) {
-            return response()->json(['message' => $e->getMessage()], 409);
+            return response()->json(['message' => $e->getMessage()], Response::HTTP_CONFLICT);
         }
 
         return response()->json([
             'reservation_id' => $reservation->id,
             'status' => $reservation->status,
             'expires_at' => $reservation->expires_at?->toIso8601String(),
-        ], 201);
+        ], Response::HTTP_CREATED);
     }
 }

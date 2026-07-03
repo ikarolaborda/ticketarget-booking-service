@@ -8,16 +8,24 @@ use Monolog\Level;
 use Psr\Log\LoggerInterface;
 use Ticketarget\Logging\LoggerFactory;
 
+/**
+ * Laravel custom-channel factory that hands logging off to the shared
+ * ticketarget/logging package, keeping every service's log shape identical.
+ * All settings come from the channel config (config/logging.php) — env() is
+ * unavailable here once config caching is enabled.
+ */
 final class CreateKafkaLogger
 {
     public function __invoke(array $config): LoggerInterface
     {
-        return (new LoggerFactory(
-            service: (string) env('APP_NAME', 'booking-service'),
-            environment: (string) env('APP_ENV', 'production'),
-            kafkaBrokers: (string) env('KAFKA_BROKERS', ''),
-            kafkaTopic: (string) env('KAFKA_LOG_TOPIC', 'logs.app'),
+        $factory = new LoggerFactory(
+            service: (string) ($config['service'] ?? 'booking-service'),
+            environment: (string) ($config['environment'] ?? 'production'),
+            kafkaBrokers: (string) ($config['brokers'] ?? ''),
+            kafkaTopic: (string) ($config['topic'] ?? 'logs.app'),
             level: Level::fromName(ucfirst((string) ($config['level'] ?? 'debug'))),
-        ))->create('booking-service');
+        );
+
+        return $factory->create('booking-service');
     }
 }

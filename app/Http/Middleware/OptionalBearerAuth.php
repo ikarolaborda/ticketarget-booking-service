@@ -31,7 +31,7 @@ final readonly class OptionalBearerAuth
         $claims = $this->tokens->verify($token);
 
         if ($claims === null) {
-            return response()->json(['message' => 'Invalid or expired token.'], 401);
+            return response()->json(['message' => 'Invalid or expired token.'], Response::HTTP_UNAUTHORIZED);
         }
 
         $request->attributes->set('auth_user_id', $claims['sub']);

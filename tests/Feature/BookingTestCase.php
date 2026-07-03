@@ -93,12 +93,14 @@ abstract class BookingTestCase extends TestCase
         array $ticketIds,
         ?CarbonInterface $expiresAt = null,
     ): Reservation {
-        return Reservation::query()->create([
-            'user_id' => $userId,
-            'ticket_ids' => $ticketIds,
-            'status' => Reservation::STATUS_HELD,
-            'expires_at' => $expiresAt ?? now()->addMinutes(10),
-        ]);
+        $reservation = new Reservation();
+        $reservation->user_id = $userId;
+        $reservation->ticket_ids = $ticketIds;
+        $reservation->status = Reservation::STATUS_HELD;
+        $reservation->expires_at = $expiresAt ?? now()->addMinutes(10);
+        $reservation->save();
+
+        return $reservation;
     }
 
     /**

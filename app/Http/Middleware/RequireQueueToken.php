@@ -24,7 +24,7 @@ final readonly class RequireQueueToken
         $token = (string) $request->headers->get('X-Queue-Token', '');
 
         if ($token === '' || ! $this->issuer->isValid($token)) {
-            return response()->json(['message' => 'Valid queue token required'], 403);
+            return response()->json(['message' => 'Valid queue token required'], Response::HTTP_FORBIDDEN);
         }
 
         return $next($request);

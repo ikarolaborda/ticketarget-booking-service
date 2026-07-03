@@ -47,7 +47,8 @@ final class ReleaseExpiredReservations extends Command
                         ->where('status', Ticket::STATUS_UNAVAILABLE)
                         ->update(['status' => Ticket::STATUS_AVAILABLE]);
 
-                    $reservation->update(['status' => Reservation::STATUS_RELEASED]);
+                    $reservation->status = Reservation::STATUS_RELEASED;
+                    $reservation->save();
                     $released++;
                 });
             });
