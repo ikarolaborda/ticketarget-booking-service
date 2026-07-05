@@ -11,11 +11,13 @@ use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\Reservation;
 use App\Models\SeatInventory;
+use App\Services\EventDirectoryProjector;
 use App\Services\OutboxWriter;
 use App\Services\SeatInventoryProjector;
 use App\Services\TicketCodeIssuer;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Psr\Log\LoggerInterface;
@@ -35,6 +37,7 @@ final readonly class ConfirmBookingAction
         private PaymentGateway $payments,
         private OutboxWriter $outbox,
         private SeatInventoryProjector $inventory,
+        private EventDirectoryProjector $directory,
         private LoggerInterface $logger,
     ) {}
 
@@ -78,13 +81,7 @@ final readonly class ConfirmBookingAction
                     throw new ReservationInvalidException('Held seats changed before confirmation');
                 }
 
-                // Documented residual catalog read (events only, never
-                // tickets): event name/date snapshots move to an event-fed
-                // directory read model before schema isolation.
-                $events = DB::table('events')
-                    ->whereIn('id', $locked->pluck('event_id')->filter()->unique())
-                    ->get(['id', 'name', 'date'])
-                    ->keyBy('id');
+                $events = $this->eventSnapshots($locked->pluck('event_id')->filter()->unique()->values());
 
                 foreach ($locked as $seat) {
                     $event = $seat->event_id !== null ? ($events[$seat->event_id] ?? null) : null;
@@ -149,6 +146,49 @@ final readonly class ConfirmBookingAction
 
             throw $e;
         }
+    }
+
+    /**
+     * Event name/date snapshots come from the booking-owned directory
+     * projection. The shared-table fallback stays until the directory
+     * backfill has converged: a lagging projection must never fail a
+     * purchase. Fallback hits are logged (rollout signal) and written
+     * through, so the next confirm for the same event is booking-local.
+     *
+     * @param  Collection<int, string>  $eventIds
+     * @return array<string, object{name: mixed, date: mixed}>
+     */
+    private function eventSnapshots(Collection $eventIds): array
+    {
+        $events = DB::table('catalog_event_directory')
+            ->whereIn('event_id', $eventIds)
+            ->get(['event_id', 'name', 'event_date'])
+            ->keyBy('event_id')
+            ->map(static fn (object $row): object => (object) [
+                'name' => $row->name,
+                'date' => $row->event_date,
+            ]);
+
+        $missing = $eventIds->reject(static fn (string $id): bool => isset($events[$id]));
+
+        if ($missing->isEmpty()) {
+            return $events->all();
+        }
+
+        $this->logger->warning('Event directory miss; fell back to catalog events', [
+            'event_ids' => $missing->values()->all(),
+        ]);
+
+        $fallback = DB::table('events')
+            ->whereIn('id', $missing)
+            ->get(['id', 'name', 'date']);
+
+        foreach ($fallback as $event) {
+            $this->directory->apply($event->id, $event->name, $event->date, now()->format('Y-m-d\TH:i:s.uP'));
+            $events[$event->id] = (object) ['name' => $event->name, 'date' => $event->date];
+        }
+
+        return $events->all();
     }
 
     /**

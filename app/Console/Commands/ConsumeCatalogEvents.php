@@ -6,6 +6,8 @@ namespace App\Console\Commands;
 
 use App\Models\SeatInventory;
 use App\Services\CapacityLedgerProjector;
+use App\Services\EventDirectoryProjector;
+use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Psr\Log\LoggerInterface;
@@ -15,13 +17,14 @@ use RdKafka\Message;
 use Throwable;
 
 /**
- * Drains catalog integration events into the local capacity read model.
+ * Drains catalog integration events into the local read models: capacity
+ * ledger (ticket.generated) and event directory (event.created/updated).
  * Bounded batch per run (scheduled every minute, like outbox:publish) so a
  * stuck broker cannot wedge the scheduler. Offsets are committed only after
  * the projector has handled the message — at-least-once delivery plus the
- * ledger's event_key dedupe yields effectively-once application. The consumer
- * contract is deliberately minimal: event_key, event_id, zone_id, count —
- * never the tickets[] detail.
+ * ledger's event_key dedupe and the directory's monotonic occurred_at guard
+ * yield effectively-once application. The capacity contract is deliberately
+ * minimal: event_key, event_id, zone_id, count — never the tickets[] detail.
  */
 final class ConsumeCatalogEvents extends Command
 {
@@ -35,7 +38,7 @@ final class ConsumeCatalogEvents extends Command
 
     protected $description = 'Consume catalog events into the local capacity read model';
 
-    public function handle(CapacityLedgerProjector $projector, LoggerInterface $logger): int
+    public function handle(CapacityLedgerProjector $projector, EventDirectoryProjector $directory, LoggerInterface $logger): int
     {
         if (! extension_loaded('rdkafka')) {
             $logger->warning('Catalog consume skipped: rdkafka extension unavailable');
@@ -73,7 +76,7 @@ final class ConsumeCatalogEvents extends Command
 
                 $idleMs = 0;
 
-                match ($this->project($projector, $logger, $message)) {
+                match ($this->project($projector, $directory, $logger, $message)) {
                     self::OUTCOME_APPLIED => $applied++,
                     self::OUTCOME_DUPLICATE => $duplicates++,
                     self::OUTCOME_IGNORED => $ignored++,
@@ -104,14 +107,26 @@ final class ConsumeCatalogEvents extends Command
         return self::SUCCESS;
     }
 
-    private function project(CapacityLedgerProjector $projector, LoggerInterface $logger, Message $message): string
+    private function project(CapacityLedgerProjector $projector, EventDirectoryProjector $directory, LoggerInterface $logger, Message $message): string
     {
         $envelope = json_decode((string) $message->payload, true);
 
-        if (! is_array($envelope) || ($envelope['event_type'] ?? null) !== 'ticket.generated') {
+        if (! is_array($envelope)) {
             return self::OUTCOME_IGNORED;
         }
 
+        return match ($envelope['event_type'] ?? null) {
+            'ticket.generated' => $this->projectCapacity($projector, $logger, $envelope),
+            'event.created', 'event.updated' => $this->projectDirectory($directory, $logger, $envelope),
+            default => self::OUTCOME_IGNORED,
+        };
+    }
+
+    /**
+     * @param  array<mixed>  $envelope
+     */
+    private function projectCapacity(CapacityLedgerProjector $projector, LoggerInterface $logger, array $envelope): string
+    {
         $eventKey = $envelope['event_key'] ?? null;
         $payload = $envelope['payload'] ?? null;
         $eventId = is_array($payload) ? ($payload['event_id'] ?? null) : null;
@@ -138,6 +153,41 @@ final class ConsumeCatalogEvents extends Command
         return $projector->apply($eventKey, $eventId, $zoneId, (int) $count)
             ? self::OUTCOME_APPLIED
             : self::OUTCOME_DUPLICATE;
+    }
+
+    /**
+     * @param  array<mixed>  $envelope
+     */
+    private function projectDirectory(EventDirectoryProjector $directory, LoggerInterface $logger, array $envelope): string
+    {
+        $payload = $envelope['payload'] ?? null;
+        $eventId = is_array($payload) ? ($payload['event_id'] ?? null) : null;
+        $name = is_array($payload) ? ($payload['name'] ?? null) : null;
+        $occurredAt = is_array($payload) ? ($payload['occurred_at'] ?? null) : null;
+
+        if (! is_string($eventId) || ! is_string($name) || ! is_string($occurredAt)) {
+            $logger->warning('Catalog event skipped: malformed directory event', [
+                'event_key' => is_string($envelope['event_key'] ?? null) ? $envelope['event_key'] : null,
+            ]);
+
+            return self::OUTCOME_IGNORED;
+        }
+
+        $date = is_string($payload['date'] ?? null) ? $payload['date'] : null;
+
+        try {
+            return $directory->apply($eventId, $name, $date, $occurredAt)
+                ? self::OUTCOME_APPLIED
+                : self::OUTCOME_DUPLICATE;
+        } catch (InvalidFormatException) {
+            // Unparseable timestamps would fail identically on every replay;
+            // skip and commit like any other malformed message.
+            $logger->warning('Catalog event skipped: unparseable directory timestamps', [
+                'event_id' => $eventId,
+            ]);
+
+            return self::OUTCOME_IGNORED;
+        }
     }
 
     /**
