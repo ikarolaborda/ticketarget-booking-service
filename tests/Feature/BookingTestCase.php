@@ -11,6 +11,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 abstract class BookingTestCase extends TestCase
@@ -120,6 +121,16 @@ abstract class BookingTestCase extends TestCase
         $reservation->save();
 
         return $reservation;
+    }
+
+    protected function confirm(string $reservationId, string $userId): TestResponse
+    {
+        return $this->postJson('/booking', [
+            'reservation_id' => $reservationId,
+            'user_id' => $userId,
+            'payment_token' => 'pm_card_visa',
+            'email' => 'buyer@example.com',
+        ]);
     }
 
     /**

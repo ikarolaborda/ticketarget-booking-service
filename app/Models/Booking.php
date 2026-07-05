@@ -19,6 +19,9 @@ final class Booking extends Model
 
     protected function casts(): array
     {
-        return ['amount' => 'decimal:2'];
+        return [
+            'amount' => 'decimal:2',
+            'event_date' => 'datetime',
+        ];
     }
 }

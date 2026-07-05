@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\Models\Booking;
+use App\Models\Payment;
+use App\Models\SeatInventory;
 use App\Models\Ticket;
+use App\Services\OutboxWriter;
+use App\Services\SeatInventoryProjector;
 use Illuminate\Database\ConnectionInterface;
 use Psr\Log\LoggerInterface;
 
@@ -20,11 +24,15 @@ final readonly class ReconcileRefundAction
 {
     public function __construct(
         private ConnectionInterface $db,
+        private OutboxWriter $outbox,
+        private SeatInventoryProjector $inventory,
         private LoggerInterface $logger,
     ) {}
 
     public function execute(string $paymentIntentId, int $amountRefunded, int $chargeAmount): void
     {
+        $this->reconcilePayment($paymentIntentId, $amountRefunded);
+
         $pending = Booking::query()
             ->where('charge_id', $paymentIntentId)
             ->where('status', Booking::STATUS_REFUND_PENDING)
@@ -65,15 +73,41 @@ final readonly class ReconcileRefundAction
 
             // Release the seat only from the booked state — a seat the sweeper
             // or a resale already moved must never be yanked back.
-            Ticket::query()
+            $released = Ticket::query()
                 ->where('id', $booking->ticket_id)
                 ->where('status', Ticket::STATUS_BOOKED)
                 ->update(['status' => Ticket::STATUS_AVAILABLE]);
+
+            if ($released > 0) {
+                $this->inventory->project([$booking->ticket_id], SeatInventory::STATUS_AVAILABLE);
+            }
 
             $booking->status = Booking::STATUS_REFUNDED;
             $booking->save();
 
             $this->logger->info('Refund reconciled; seat released', ['booking_id' => $bookingId]);
         });
+    }
+
+    /**
+     * The webhook total is authoritative for the Payment aggregate. Legacy
+     * bookings created before the payments table degrade gracefully: no
+     * matching payment simply means only booking rows are reconciled.
+     */
+    private function reconcilePayment(string $paymentIntentId, int $amountRefunded): void
+    {
+        $payment = Payment::query()->where('provider_payment_intent_id', $paymentIntentId)->first();
+
+        if ($payment === null) {
+            return;
+        }
+
+        $payment->applyRefundTotal(min($amountRefunded, $payment->amountInCents()));
+
+        $this->outbox->write('payment', $payment->id, 'payment.refunded', 'payment.refunded:'.$payment->id.':'.$payment->refundedAmountInCents(), [
+            'payment_id' => $payment->id,
+            'reservation_id' => $payment->reservation_id,
+            'refunded_cents' => $payment->refundedAmountInCents(),
+        ]);
     }
 }

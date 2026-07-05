@@ -52,10 +52,13 @@ final readonly class RefundBookingAction
                 throw new RefundNotAllowedException('This booking is not refundable (already refunded or in progress).', Response::HTTP_CONFLICT);
             }
 
-            $eventDate = DB::table('tickets')
-                ->leftJoin('events', 'events.id', '=', 'tickets.event_id')
-                ->where('tickets.id', $booking->ticket_id)
-                ->value('events.date');
+            // The confirmation-time snapshot avoids the cross-context join;
+            // rows created before the snapshot column fall back to it.
+            $eventDate = $booking->getRawOriginal('event_date')
+                ?? DB::table('tickets')
+                    ->leftJoin('events', 'events.id', '=', 'tickets.event_id')
+                    ->where('tickets.id', $booking->ticket_id)
+                    ->value('events.date');
 
             $tier = $this->tierFor($eventDate);
 

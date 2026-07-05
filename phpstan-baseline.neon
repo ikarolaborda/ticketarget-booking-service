@@ -13,18 +13,6 @@ parameters:
 			path: app/Actions/ConfirmBookingAction.php
 
 		-
-			message: '#^Parameter \#1 \$ticketIds of method App\\Actions\\ConfirmBookingAction\:\:totalInCents\(\) expects list\<string\>, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Actions/ConfirmBookingAction.php
-
-		-
-			message: '#^Parameter \#1 \$value of function count expects array\|Countable, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Actions/ConfirmBookingAction.php
-
-		-
 			message: '#^Property App\\Models\\Booking\:\:\$ticket_id \(string\) does not accept int\.$#'
 			identifier: assign.propertyType
 			count: 1
@@ -77,12 +65,6 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/StripeWebhookController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Booking\:\:\$event_date\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/VerifyTicketController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Booking\:\:\$event_name\.$#'

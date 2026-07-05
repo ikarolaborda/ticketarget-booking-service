@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\Models\Reservation;
+use App\Models\SeatInventory;
 use App\Models\Ticket;
+use App\Services\SeatInventoryProjector;
 use Illuminate\Console\Command;
 use Illuminate\Database\ConnectionInterface;
 use Psr\Log\LoggerInterface;
@@ -22,7 +24,7 @@ final class ReleaseExpiredReservations extends Command
 
     protected $description = 'Release seats from expired, still-held reservations';
 
-    public function handle(ConnectionInterface $db, LoggerInterface $logger): int
+    public function handle(ConnectionInterface $db, SeatInventoryProjector $inventory, LoggerInterface $logger): int
     {
         $limit = (int) $this->option('limit');
         $released = 0;
@@ -32,8 +34,8 @@ final class ReleaseExpiredReservations extends Command
             ->where('expires_at', '<', now())
             ->limit($limit)
             ->pluck('id')
-            ->each(function (string $reservationId) use ($db, &$released): void {
-                $db->transaction(function () use ($reservationId, &$released): void {
+            ->each(function (string $reservationId) use ($db, $inventory, &$released): void {
+                $db->transaction(function () use ($reservationId, $inventory, &$released): void {
                     $reservation = Reservation::query()->lockForUpdate()->find($reservationId);
 
                     if ($reservation === null
@@ -43,10 +45,15 @@ final class ReleaseExpiredReservations extends Command
                         return;
                     }
 
+                    /** @var list<string> $ticketIds */
+                    $ticketIds = $reservation->ticket_ids;
+
                     Ticket::query()
-                        ->whereIn('id', $reservation->ticket_ids)
+                        ->whereIn('id', $ticketIds)
                         ->where('status', Ticket::STATUS_UNAVAILABLE)
                         ->update(['status' => Ticket::STATUS_AVAILABLE]);
+
+                    $inventory->project($ticketIds, SeatInventory::STATUS_AVAILABLE);
 
                     $reservation->status = Reservation::STATUS_RELEASED;
                     $reservation->save();

@@ -6,7 +6,9 @@ namespace App\Actions;
 
 use App\Exceptions\SeatUnavailableException;
 use App\Models\Reservation;
+use App\Models\SeatInventory;
 use App\Models\Ticket;
+use App\Services\SeatInventoryProjector;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Database\ConnectionInterface;
@@ -33,6 +35,7 @@ final readonly class ReserveSeatsAction
     public function __construct(
         private ConnectionInterface $db,
         private CacheFactory $cache,
+        private SeatInventoryProjector $inventory,
         private LoggerInterface $logger,
     ) {}
 
@@ -68,6 +71,8 @@ final readonly class ReserveSeatsAction
                 $reservation->status = Reservation::STATUS_HELD;
                 $reservation->expires_at = now()->addMinutes(self::HOLD_MINUTES);
                 $reservation->save();
+
+                $this->inventory->project($ticketIds, SeatInventory::STATUS_HELD, $reservation->id);
 
                 return $reservation;
             });

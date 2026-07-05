@@ -7,3 +7,7 @@ use Illuminate\Support\Facades\Schedule;
 Schedule::command('booking:release-expired')
     ->everyMinute()
     ->withoutOverlapping();
+
+Schedule::command('outbox:publish')
+    ->everyMinute()
+    ->withoutOverlapping();

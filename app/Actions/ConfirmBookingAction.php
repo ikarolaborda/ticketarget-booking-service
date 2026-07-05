@@ -8,10 +8,16 @@ use App\Domain\Payment\PaymentGateway;
 use App\Exceptions\ReservationInvalidException;
 use App\Mail\TicketsConfirmationMail;
 use App\Models\Booking;
+use App\Models\Payment;
 use App\Models\Reservation;
+use App\Models\SeatInventory;
 use App\Models\Ticket;
+use App\Services\OutboxWriter;
+use App\Services\SeatInventoryProjector;
 use App\Services\TicketCodeIssuer;
 use Illuminate\Database\ConnectionInterface;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -19,13 +25,17 @@ use Throwable;
 /**
  * Turns a held reservation into a paid booking. Payment happens before the DB
  * commit; the Stripe idempotency key is the reservation id, so a retry after a
- * mid-flight failure neither double-charges nor double-books.
+ * mid-flight failure neither double-charges nor double-books. Money state
+ * lives on the Payment aggregate (one per reservation); booking rows carry
+ * charge_id only as a denormalized projection.
  */
 final readonly class ConfirmBookingAction
 {
     public function __construct(
         private ConnectionInterface $db,
         private PaymentGateway $payments,
+        private OutboxWriter $outbox,
+        private SeatInventoryProjector $inventory,
         private LoggerInterface $logger,
     ) {}
 
@@ -41,10 +51,21 @@ final readonly class ConfirmBookingAction
             throw new ReservationInvalidException('Reservation is missing, expired, or not held by this user');
         }
 
+        /** @var list<string> $ticketIds */
         $ticketIds = $reservation->ticket_ids;
         $amountInCents = $this->totalInCents($ticketIds);
 
-        $payment = $this->payments->charge($amountInCents, 'brl', $paymentToken, $reservation->id);
+        $payment = $this->preparePayment($reservation->id, $amountInCents);
+
+        try {
+            $result = $this->payments->charge($amountInCents, 'brl', $paymentToken, $reservation->id);
+        } catch (Throwable $e) {
+            $payment->markFailed($e->getMessage());
+
+            throw $e;
+        }
+
+        $payment->markCaptured($result->chargeId);
 
         try {
             $confirmed = $this->db->transaction(function () use ($reservation, $ticketIds, $payment, $email): Reservation {
@@ -58,6 +79,11 @@ final readonly class ConfirmBookingAction
                     throw new ReservationInvalidException('Held seats changed before confirmation');
                 }
 
+                $eventDates = DB::table('tickets')
+                    ->leftJoin('events', 'events.id', '=', 'tickets.event_id')
+                    ->whereIn('tickets.id', $ticketIds)
+                    ->pluck('events.date', 'tickets.id');
+
                 foreach ($locked as $ticket) {
                     $ticket->status = Ticket::STATUS_BOOKED;
                     $ticket->save();
@@ -68,14 +94,30 @@ final readonly class ConfirmBookingAction
                     $booking->ticket_id = $ticket->id;
                     $booking->user_id = $reservation->user_id;
                     $booking->email = $email;
-                    $booking->charge_id = $payment->chargeId;
+                    $booking->payment_id = $payment->id;
+                    $booking->charge_id = $payment->provider_payment_intent_id;
                     $booking->amount = $ticket->price;
+                    $booking->event_date = $eventDates[$ticket->id] ?? null;
                     $booking->save();
                 }
 
+                $this->inventory->project($ticketIds, SeatInventory::STATUS_BOOKED, $reservation->id);
+
+                $this->outbox->write('payment', $payment->id, 'payment.captured', 'payment.captured:'.$payment->id, [
+                    'payment_id' => $payment->id,
+                    'reservation_id' => $reservation->id,
+                    'amount_cents' => $payment->amountInCents(),
+                    'currency' => 'brl',
+                ]);
+                $this->outbox->write('reservation', $reservation->id, 'booking.confirmed', 'booking.confirmed:'.$reservation->id, [
+                    'reservation_id' => $reservation->id,
+                    'ticket_ids' => $ticketIds,
+                    'user_id' => $reservation->user_id,
+                ]);
+
                 $reservation->status = Reservation::STATUS_CONFIRMED;
                 $reservation->save();
-                $this->logger->info('Booking confirmed', ['reservation_id' => $reservation->id, 'charge_id' => $payment->chargeId]);
+                $this->logger->info('Booking confirmed', ['reservation_id' => $reservation->id, 'charge_id' => $payment->provider_payment_intent_id]);
 
                 return $reservation->refresh();
             });
@@ -87,15 +129,53 @@ final readonly class ConfirmBookingAction
             // The charge succeeded but the booking could not be committed, so the
             // money must go back. Refunding here keeps the customer whole; the
             // Stripe webhook reconciles the refund's final state.
-            $this->payments->refund($payment->chargeId);
+            $this->payments->refund($payment->provider_payment_intent_id);
+            $payment->applyRefundTotal($payment->amountInCents());
+            $this->outbox->write('payment', $payment->id, 'payment.refunded', 'payment.refunded:'.$payment->id.':'.$payment->refundedAmountInCents(), [
+                'payment_id' => $payment->id,
+                'reservation_id' => $reservation->id,
+                'refunded_cents' => $payment->refundedAmountInCents(),
+            ]);
             $this->logger->warning('Refunded charge after failed confirmation', [
                 'reservation_id' => $reservation->id,
-                'charge_id' => $payment->chargeId,
+                'charge_id' => $payment->provider_payment_intent_id,
                 'reason' => $e->getMessage(),
             ]);
 
             throw $e;
         }
+    }
+
+    /**
+     * Reuses the reservation's payment row on retry (a mid-flight failure
+     * leaves a failed/refunded row behind; the reservation is still held, so a
+     * new attempt resets it to pending). The unique reservation_id constraint
+     * arbitrates a concurrent duplicate — the loser adopts the winner's row.
+     */
+    private function preparePayment(string $reservationId, int $amountInCents): Payment
+    {
+        $payment = Payment::query()->where('reservation_id', $reservationId)->first();
+
+        if ($payment === null) {
+            $payment = new Payment;
+            $payment->reservation_id = $reservationId;
+        }
+
+        $payment->provider = 'stripe';
+        $payment->amount = round($amountInCents / 100, 2);
+        $payment->currency = 'brl';
+        $payment->status = Payment::STATUS_PENDING;
+        $payment->refunded_amount = 0.0;
+        $payment->failure_reason = null;
+        $payment->idempotency_key = $reservationId;
+
+        try {
+            $payment->save();
+        } catch (UniqueConstraintViolationException) {
+            $payment = Payment::query()->where('reservation_id', $reservationId)->firstOrFail();
+        }
+
+        return $payment;
     }
 
     /**
