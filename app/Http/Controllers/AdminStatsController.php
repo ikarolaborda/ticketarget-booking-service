@@ -146,12 +146,12 @@ final readonly class AdminStatsController
             return [];
         }
 
-        // Deliberate residual cross-context read (documented in
-        // docs/DDD_REMEDIATION.md): total capacity is catalog data and moves
-        // to an event-fed read model before schema isolation.
-        $capacities = DB::table('tickets')
+        // Capacity comes from the booking-local ledger fed by catalog
+        // ticket.generated events (catalog.events topic) — no catalog tables
+        // are read. Events without ledger rows report capacity null.
+        $capacities = DB::table('catalog_capacity_ledger')
             ->whereIn('event_id', $sales->pluck('id'))
-            ->select('event_id', DB::raw('COUNT(*) AS capacity'))
+            ->select('event_id', DB::raw('SUM(count) AS capacity'))
             ->groupBy('event_id')
             ->pluck('capacity', 'event_id');
 

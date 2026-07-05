@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Models\Booking;
 use App\Models\Ticket;
+use App\Services\CapacityLedgerProjector;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -67,14 +68,21 @@ final class AdminStatsTest extends BookingTestCase
         $this->assertSame(0, $series[0]['bookings']);
     }
 
-    public function test_top_events_report_sold_capacity_and_revenue(): void
+    public function test_top_events_report_sold_capacity_and_revenue_without_catalog_tables(): void
     {
         $eventId = $this->seedEvent('Big Gala');
         $soldTicket = $this->seedEventTicket($eventId, 'A01');
-        $this->seedEventTicket($eventId, 'A02');
-        $this->seedEventTicket($eventId, 'A03');
 
         $this->seedBooking(amount: '80.00', status: Booking::STATUS_PAID, createdAt: Carbon::now('UTC'), ticketId: $soldTicket);
+
+        // Capacity comes from the ledger fed by catalog.events; two events
+        // (a zone generation and a manual addition) sum to the total.
+        app(CapacityLedgerProjector::class)->apply('ticket.generated:zone:'.Str::uuid(), $eventId, (string) Str::uuid(), 2);
+        app(CapacityLedgerProjector::class)->apply('ticket.generated:manual:'.Str::uuid(), $eventId, null, 1);
+
+        // Join-freedom proof: the stats endpoint must not touch catalog tables.
+        DB::table('tickets')->delete();
+        DB::table('events')->delete();
 
         $top = $this->getJson('/booking/admin/stats', $this->adminHeaders())
             ->assertOk()
@@ -85,6 +93,32 @@ final class AdminStatsTest extends BookingTestCase
         $this->assertSame(1, $top[0]['sold']);
         $this->assertSame(3, $top[0]['capacity']);
         $this->assertSame('80.00', $top[0]['revenue']);
+    }
+
+    public function test_top_events_capacity_is_null_when_the_ledger_has_no_rows(): void
+    {
+        $eventId = $this->seedEvent('Unseeded Fest');
+        $soldTicket = $this->seedEventTicket($eventId, 'B01');
+
+        $this->seedBooking(amount: '60.00', status: Booking::STATUS_PAID, createdAt: Carbon::now('UTC'), ticketId: $soldTicket);
+
+        $top = $this->getJson('/booking/admin/stats', $this->adminHeaders())
+            ->assertOk()
+            ->json('top_events');
+
+        $this->assertCount(1, $top);
+        $this->assertNull($top[0]['capacity']);
+    }
+
+    public function test_the_capacity_ledger_deduplicates_replayed_events(): void
+    {
+        $eventId = (string) Str::uuid();
+        $projector = app(CapacityLedgerProjector::class);
+
+        $this->assertTrue($projector->apply('ticket.generated:zone:z1', $eventId, 'z1', 5));
+        $this->assertFalse($projector->apply('ticket.generated:zone:z1', $eventId, 'z1', 5));
+
+        $this->assertSame(5, (int) DB::table('catalog_capacity_ledger')->where('event_id', $eventId)->sum('count'));
     }
 
     /**

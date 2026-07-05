@@ -11,3 +11,7 @@ Schedule::command('booking:release-expired')
 Schedule::command('outbox:publish')
     ->everyMinute()
     ->withoutOverlapping();
+
+Schedule::command('catalog:consume')
+    ->everyMinute()
+    ->withoutOverlapping();

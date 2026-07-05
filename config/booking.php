@@ -13,4 +13,10 @@ return [
 
     'kafka_brokers' => env('KAFKA_BROKERS', 'kafka:9092'),
 
+    // Catalog integration events feeding the local capacity read model
+    // (DDD remediation: the admin capacity count must not read catalog tables).
+    'catalog_topic' => env('CATALOG_TOPIC', 'catalog.events'),
+
+    'catalog_consumer_group' => env('CATALOG_CONSUMER_GROUP', 'booking-capacity'),
+
 ];
