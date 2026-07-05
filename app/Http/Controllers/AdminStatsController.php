@@ -125,18 +125,19 @@ final readonly class AdminStatsController
      */
     private function topEvents(): array
     {
+        // Booking-local aggregation over the purchase-time snapshots; names
+        // and dates reflect the moment of sale, not later catalog edits.
         $sales = DB::table('bookings')
-            ->join('tickets', 'tickets.id', '=', 'bookings.ticket_id')
-            ->join('events', 'events.id', '=', 'tickets.event_id')
             ->whereIn('bookings.status', self::RECOGNIZED)
+            ->whereNotNull('bookings.event_id')
             ->select(
-                'events.id',
-                'events.name',
-                'events.date',
+                'bookings.event_id as id',
+                'bookings.event_name as name',
+                'bookings.event_date as date',
                 DB::raw('COUNT(*) AS sold'),
                 DB::raw('SUM(bookings.amount) AS revenue')
             )
-            ->groupBy('events.id', 'events.name', 'events.date')
+            ->groupBy('bookings.event_id', 'bookings.event_name', 'bookings.event_date')
             ->orderByDesc(DB::raw('SUM(bookings.amount)'))
             ->limit(self::TOP_EVENTS)
             ->get();
@@ -145,6 +146,9 @@ final readonly class AdminStatsController
             return [];
         }
 
+        // Deliberate residual cross-context read (documented in
+        // docs/DDD_REMEDIATION.md): total capacity is catalog data and moves
+        // to an event-fed read model before schema isolation.
         $capacities = DB::table('tickets')
             ->whereIn('event_id', $sales->pluck('id'))
             ->select('event_id', DB::raw('COUNT(*) AS capacity'))

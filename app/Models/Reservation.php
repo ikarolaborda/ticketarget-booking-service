@@ -7,6 +7,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property list<array{id: string, event_id: string|null, seat: string, price: string, type: string}>|null $seats
+ */
 final class Reservation extends Model
 {
     use HasUuids;
@@ -19,7 +22,11 @@ final class Reservation extends Model
 
     protected function casts(): array
     {
-        return ['ticket_ids' => 'array', 'expires_at' => 'immutable_datetime'];
+        return [
+            'ticket_ids' => 'array',
+            'seats' => 'array',
+            'expires_at' => 'immutable_datetime',
+        ];
     }
 
     public function isExpired(): bool

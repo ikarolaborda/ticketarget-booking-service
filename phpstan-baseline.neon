@@ -1,19 +1,7 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Access to an undefined property App\\Models\\Ticket\:\:\$price\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Actions/ConfirmBookingAction.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Ticket\:\:\$status\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Actions/ConfirmBookingAction.php
-
-		-
-			message: '#^Property App\\Models\\Booking\:\:\$ticket_id \(string\) does not accept int\.$#'
+			message: '#^Property App\\Models\\Booking\:\:\$amount \(float\) does not accept string\.$#'
 			identifier: assign.propertyType
 			count: 1
 			path: app/Actions/ConfirmBookingAction.php
@@ -57,7 +45,7 @@ parameters:
 		-
 			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
 			identifier: method.nonObject
-			count: 1
+			count: 2
 			path: app/Http/Controllers/ShowReservationController.php
 
 		-
@@ -65,18 +53,6 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/StripeWebhookController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Booking\:\:\$event_name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/VerifyTicketController.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\Booking\:\:\$seat\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/VerifyTicketController.php
 
 		-
 			message: '#^Method App\\Http\\Requests\\BookingRequest\:\:rules\(\) return type has no value type specified in iterable type array\.$#'

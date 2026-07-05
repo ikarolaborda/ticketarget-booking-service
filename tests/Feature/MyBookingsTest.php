@@ -100,6 +100,8 @@ final class MyBookingsTest extends BookingTestCase
         $ticket->timestamps = false;
         DB::table('tickets')->where('id', $ticket->id)->update(['event_id' => $eventId]);
 
+        $event = DB::table('events')->where('id', $eventId)->first();
+
         $reservationId = (string) Str::uuid();
         DB::table('bookings')->insert([
             'id' => (string) Str::uuid(),
@@ -109,6 +111,11 @@ final class MyBookingsTest extends BookingTestCase
             'email' => 'mine@example.com',
             'charge_id' => 'ch_'.$seat,
             'amount' => '50.00',
+            'seat' => $seat,
+            'ticket_type' => 'standard',
+            'event_id' => $eventId,
+            'event_name' => $event->name ?? null,
+            'event_date' => $event->date ?? null,
             'created_at' => $createdAt,
             'updated_at' => $createdAt,
         ]);

@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Models\Booking;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 final class AdminBookingsTest extends BookingTestCase
@@ -100,6 +101,18 @@ final class AdminBookingsTest extends BookingTestCase
         $booking->status = Booking::STATUS_PAID;
         $booking->created_at = $createdAt;
         $booking->updated_at = $createdAt;
+
+        $catalog = DB::table('tickets')
+            ->leftJoin('events', 'events.id', '=', 'tickets.event_id')
+            ->where('tickets.id', $booking->ticket_id)
+            ->first(['tickets.seat', 'tickets.type', 'tickets.event_id', 'events.name as event_name', 'events.date as event_date']);
+
+        $booking->seat = $catalog->seat ?? null;
+        $booking->ticket_type = $catalog->type ?? null;
+        $booking->event_id = $catalog->event_id ?? null;
+        $booking->event_name = $catalog->event_name ?? null;
+        $booking->event_date = $catalog->event_date ?? null;
+
         $booking->save();
 
         return $booking;

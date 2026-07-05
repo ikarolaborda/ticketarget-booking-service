@@ -24,23 +24,23 @@ final readonly class MyBookingsController
             return response()->json(['message' => 'Unauthenticated.'], Response::HTTP_UNAUTHORIZED);
         }
 
+        // Booking-local read: catalog fields come from the purchase-time
+        // snapshots on the booking rows (backfilled for legacy rows).
         $rows = Booking::query()
-            ->leftJoin('tickets', 'tickets.id', '=', 'bookings.ticket_id')
-            ->leftJoin('events', 'events.id', '=', 'tickets.event_id')
-            ->where('bookings.user_id', $userId)
-            ->orderByDesc('bookings.created_at')
-            ->orderByDesc('bookings.id')
+            ->where('user_id', $userId)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->get([
-                'bookings.reservation_id',
-                'tickets.seat',
-                'tickets.type',
-                'bookings.amount',
-                'bookings.charge_id',
-                'events.name as event_name',
-                'events.date as event_date',
-                'bookings.status',
-                'bookings.created_at as purchased_at',
-                'bookings.id as booking_id',
+                'reservation_id',
+                'seat',
+                'ticket_type as type',
+                'amount',
+                'charge_id',
+                'event_name',
+                'event_date',
+                'status',
+                'created_at as purchased_at',
+                'id as booking_id',
             ])
             ->map(function ($row) {
                 $row->ticket_code = $this->codes->issue($row->booking_id);

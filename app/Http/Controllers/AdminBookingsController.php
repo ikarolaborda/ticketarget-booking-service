@@ -25,17 +25,16 @@ final readonly class AdminBookingsController
         $limit = min(max((int) $request->integer('limit', self::DEFAULT_LIMIT), 1), self::MAX_LIMIT);
         $cursor = $this->decodeCursor((string) $request->query('cursor', ''));
 
+        // Booking-local read: seat/event_name are purchase-time snapshots.
         $query = DB::table('bookings')
-            ->leftJoin('tickets', 'tickets.id', '=', 'bookings.ticket_id')
-            ->leftJoin('events', 'events.id', '=', 'tickets.event_id')
             ->select(
                 'bookings.id',
                 'bookings.created_at',
                 'bookings.email',
                 'bookings.amount',
                 'bookings.status',
-                'tickets.seat',
-                'events.name AS event_name'
+                'bookings.seat',
+                'bookings.event_name'
             )
             ->orderByDesc('bookings.created_at')
             ->orderByDesc('bookings.id')

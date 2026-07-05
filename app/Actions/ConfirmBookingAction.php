@@ -79,10 +79,13 @@ final readonly class ConfirmBookingAction
                     throw new ReservationInvalidException('Held seats changed before confirmation');
                 }
 
-                $eventDates = DB::table('tickets')
+                // Purchase-time catalog snapshots: display/reporting reads
+                // stay booking-local and receipts survive later catalog edits.
+                $catalog = DB::table('tickets')
                     ->leftJoin('events', 'events.id', '=', 'tickets.event_id')
                     ->whereIn('tickets.id', $ticketIds)
-                    ->pluck('events.date', 'tickets.id');
+                    ->get(['tickets.id', 'events.name as event_name', 'events.date as event_date'])
+                    ->keyBy('id');
 
                 foreach ($locked as $ticket) {
                     $ticket->status = Ticket::STATUS_BOOKED;
@@ -97,7 +100,11 @@ final readonly class ConfirmBookingAction
                     $booking->payment_id = $payment->id;
                     $booking->charge_id = $payment->provider_payment_intent_id;
                     $booking->amount = $ticket->price;
-                    $booking->event_date = $eventDates[$ticket->id] ?? null;
+                    $booking->seat = $ticket->seat;
+                    $booking->ticket_type = $ticket->type;
+                    $booking->event_id = $ticket->event_id;
+                    $booking->event_name = $catalog[$ticket->id]->event_name ?? null;
+                    $booking->event_date = $catalog[$ticket->id]->event_date ?? null;
                     $booking->save();
                 }
 

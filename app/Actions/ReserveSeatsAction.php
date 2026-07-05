@@ -70,6 +70,17 @@ final readonly class ReserveSeatsAction
                 $reservation->ticket_ids = $ticketIds;
                 $reservation->status = Reservation::STATUS_HELD;
                 $reservation->expires_at = now()->addMinutes(self::HOLD_MINUTES);
+                $reservation->seats = $held
+                    ->sortBy('seat')
+                    ->map(static fn (Ticket $ticket): array => [
+                        'id' => $ticket->id,
+                        'event_id' => $ticket->event_id,
+                        'seat' => $ticket->seat,
+                        'price' => number_format((float) $ticket->price, 2, '.', ''),
+                        'type' => $ticket->type,
+                    ])
+                    ->values()
+                    ->all();
                 $reservation->save();
 
                 $this->inventory->project($ticketIds, SeatInventory::STATUS_HELD, $reservation->id);

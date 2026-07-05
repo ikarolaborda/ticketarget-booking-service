@@ -32,6 +32,34 @@ final readonly class ShowReservationController
             $status = Reservation::STATUS_RELEASED;
         }
 
+        $seats = $reservation->seats;
+
+        if ($seats !== null && $seats !== []) {
+            // Reserve-time snapshot path: per-ticket status collapses to the
+            // aggregate reservation state on purpose — the reservation is the
+            // source of truth for this rehydration view.
+            $ticketStatus = match ($status) {
+                Reservation::STATUS_CONFIRMED => 'booked',
+                Reservation::STATUS_HELD => 'unavailable',
+                default => 'available',
+            };
+
+            return response()->json([
+                'reservation_id' => $reservation->id,
+                'status' => $status,
+                'expires_at' => $reservation->expires_at?->toIso8601String(),
+                'event_id' => $seats[0]['event_id'] ?? null,
+                'tickets' => array_map(static fn (array $seat): array => [
+                    'id' => $seat['id'],
+                    'seat' => $seat['seat'],
+                    'price' => $seat['price'],
+                    'type' => $seat['type'],
+                    'status' => $ticketStatus,
+                ], $seats),
+            ]);
+        }
+
+        // Legacy fallback for reservations created before the snapshot column.
         $tickets = DB::table('tickets')
             ->whereIn('id', $reservation->ticket_ids ?? [])
             ->orderBy('seat')
