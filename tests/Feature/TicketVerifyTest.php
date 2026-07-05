@@ -80,7 +80,7 @@ final class TicketVerifyTest extends BookingTestCase
         ]);
 
         $ticket = $this->createTicket(Ticket::STATUS_BOOKED, $seat);
-        DB::table('tickets')->where('id', $ticket->id)->update(['event_id' => $eventId]);
+        $this->assignTicketToEvent($ticket->id, $eventId);
 
         $bookingId = (string) Str::uuid();
         DB::table('bookings')->insert([

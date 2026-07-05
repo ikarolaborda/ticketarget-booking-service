@@ -11,7 +11,6 @@ use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\Reservation;
 use App\Models\SeatInventory;
-use App\Models\Ticket;
 use App\Services\OutboxWriter;
 use App\Services\SeatInventoryProjector;
 use App\Services\TicketCodeIssuer;
@@ -69,9 +68,9 @@ final readonly class ConfirmBookingAction
 
         try {
             $confirmed = $this->db->transaction(function () use ($reservation, $ticketIds, $payment, $email): Reservation {
-                $locked = Ticket::query()
-                    ->whereIn('id', $ticketIds)
-                    ->where('status', Ticket::STATUS_UNAVAILABLE)
+                $locked = SeatInventory::query()
+                    ->whereIn('ticket_id', $ticketIds)
+                    ->where('status', SeatInventory::STATUS_HELD)
                     ->lockForUpdate()
                     ->get();
 
@@ -79,36 +78,35 @@ final readonly class ConfirmBookingAction
                     throw new ReservationInvalidException('Held seats changed before confirmation');
                 }
 
-                // Purchase-time catalog snapshots: display/reporting reads
-                // stay booking-local and receipts survive later catalog edits.
-                $catalog = DB::table('tickets')
-                    ->leftJoin('events', 'events.id', '=', 'tickets.event_id')
-                    ->whereIn('tickets.id', $ticketIds)
-                    ->get(['tickets.id', 'events.name as event_name', 'events.date as event_date'])
+                // Documented residual catalog read (events only, never
+                // tickets): event name/date snapshots move to an event-fed
+                // directory read model before schema isolation.
+                $events = DB::table('events')
+                    ->whereIn('id', $locked->pluck('event_id')->filter()->unique())
+                    ->get(['id', 'name', 'date'])
                     ->keyBy('id');
 
-                foreach ($locked as $ticket) {
-                    $ticket->status = Ticket::STATUS_BOOKED;
-                    $ticket->save();
+                foreach ($locked as $seat) {
+                    $event = $seat->event_id !== null ? ($events[$seat->event_id] ?? null) : null;
 
                     $booking = new Booking;
                     $booking->status = Booking::STATUS_PAID;
                     $booking->reservation_id = $reservation->id;
-                    $booking->ticket_id = $ticket->id;
+                    $booking->ticket_id = $seat->ticket_id;
                     $booking->user_id = $reservation->user_id;
                     $booking->email = $email;
                     $booking->payment_id = $payment->id;
                     $booking->charge_id = $payment->provider_payment_intent_id;
-                    $booking->amount = $ticket->price;
-                    $booking->seat = $ticket->seat;
-                    $booking->ticket_type = $ticket->type;
-                    $booking->event_id = $ticket->event_id;
-                    $booking->event_name = $catalog[$ticket->id]->event_name ?? null;
-                    $booking->event_date = $catalog[$ticket->id]->event_date ?? null;
+                    $booking->amount = $seat->price;
+                    $booking->seat = $seat->seat;
+                    $booking->ticket_type = $seat->type;
+                    $booking->event_id = $seat->event_id;
+                    $booking->event_name = $event->name ?? null;
+                    $booking->event_date = $event->date ?? null;
                     $booking->save();
                 }
 
-                $this->inventory->project($ticketIds, SeatInventory::STATUS_BOOKED, $reservation->id);
+                $this->inventory->transition($ticketIds, SeatInventory::STATUS_BOOKED, $reservation->id);
 
                 $this->outbox->write('payment', $payment->id, 'payment.captured', 'payment.captured:'.$payment->id, [
                     'payment_id' => $payment->id,
@@ -193,9 +191,9 @@ final readonly class ConfirmBookingAction
     {
         try {
             $bookings = Booking::query()->where('reservation_id', $reservation->id)->get();
-            $seats = Ticket::query()
-                ->whereIn('id', $reservation->ticket_ids)
-                ->pluck('seat', 'id')
+            $seats = SeatInventory::query()
+                ->whereIn('ticket_id', $reservation->ticket_ids)
+                ->pluck('seat', 'ticket_id')
                 ->all();
 
             $codes = app(TicketCodeIssuer::class);
@@ -218,7 +216,7 @@ final readonly class ConfirmBookingAction
      */
     private function totalInCents(array $ticketIds): int
     {
-        $total = Ticket::query()->whereIn('id', $ticketIds)->sum('price');
+        $total = SeatInventory::query()->whereIn('ticket_id', $ticketIds)->sum('price');
 
         return (int) round(((float) $total) * 100);
     }

@@ -7,7 +7,6 @@ namespace App\Actions;
 use App\Models\Booking;
 use App\Models\Payment;
 use App\Models\SeatInventory;
-use App\Models\Ticket;
 use App\Services\OutboxWriter;
 use App\Services\SeatInventoryProjector;
 use Illuminate\Database\ConnectionInterface;
@@ -73,13 +72,13 @@ final readonly class ReconcileRefundAction
 
             // Release the seat only from the booked state — a seat the sweeper
             // or a resale already moved must never be yanked back.
-            $released = Ticket::query()
-                ->where('id', $booking->ticket_id)
-                ->where('status', Ticket::STATUS_BOOKED)
-                ->update(['status' => Ticket::STATUS_AVAILABLE]);
+            $released = SeatInventory::query()
+                ->where('ticket_id', $booking->ticket_id)
+                ->where('status', SeatInventory::STATUS_BOOKED)
+                ->count();
 
             if ($released > 0) {
-                $this->inventory->project([$booking->ticket_id], SeatInventory::STATUS_AVAILABLE);
+                $this->inventory->transition([$booking->ticket_id], SeatInventory::STATUS_AVAILABLE);
             }
 
             $booking->status = Booking::STATUS_REFUNDED;

@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\Reservation;
+use App\Models\SeatInventory;
 use App\Models\Ticket;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
@@ -79,6 +81,7 @@ abstract class BookingTestCase extends TestCase
         Schema::create('tickets', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->uuid('event_id');
+            $table->uuid('zone_id')->nullable();
             $table->string('seat');
             $table->decimal('price', 10, 2);
             $table->string('type')->default('standard');
@@ -88,6 +91,18 @@ abstract class BookingTestCase extends TestCase
             $table->unique(['event_id', 'seat']);
         });
     }
+
+    protected function assignTicketToEvent(string $ticketId, string $eventId): void
+    {
+        DB::table('tickets')->where('id', $ticketId)->update(['event_id' => $eventId]);
+        DB::table('seat_inventory')->where('ticket_id', $ticketId)->update(['event_id' => $eventId]);
+    }
+
+    protected const array INVENTORY_STATUS = [
+        Ticket::STATUS_AVAILABLE => SeatInventory::STATUS_AVAILABLE,
+        Ticket::STATUS_UNAVAILABLE => SeatInventory::STATUS_HELD,
+        Ticket::STATUS_BOOKED => SeatInventory::STATUS_BOOKED,
+    ];
 
     protected function createTicket(
         string $status = Ticket::STATUS_AVAILABLE,
@@ -101,6 +116,22 @@ abstract class BookingTestCase extends TestCase
         $ticket->type = 'standard';
         $ticket->status = $status;
         $ticket->save();
+
+        // Inventory ownership cutover: seat_inventory is what reserve/confirm
+        // read, so every catalog ticket needs its booking-owned row (the
+        // production equivalent is booking:seed-inventory / ticket.generated).
+        DB::table('seat_inventory')->insert([
+            'ticket_id' => $ticket->id,
+            'event_id' => $ticket->event_id,
+            'status' => self::INVENTORY_STATUS[$status] ?? SeatInventory::STATUS_AVAILABLE,
+            'reservation_id' => null,
+            'seat' => $ticket->seat,
+            'price' => $ticket->price,
+            'type' => $ticket->type,
+            'zone_id' => null,
+            'source' => 'seed',
+            'updated_at' => now(),
+        ]);
 
         return $ticket;
     }

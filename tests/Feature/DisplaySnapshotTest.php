@@ -43,7 +43,7 @@ final class DisplaySnapshotTest extends BookingTestCase
         ]);
 
         $ticket = $this->createTicket(Ticket::STATUS_UNAVAILABLE, 'C07');
-        Ticket::query()->whereKey($ticket->id)->update(['event_id' => $eventId]);
+        $this->assignTicketToEvent($ticket->id, $eventId);
 
         $userId = (string) Str::uuid();
         $reservation = $this->createHeldReservation($userId, [$ticket->id]);
@@ -105,7 +105,7 @@ final class DisplaySnapshotTest extends BookingTestCase
         ]);
 
         $ticket = $this->createTicket(Ticket::STATUS_UNAVAILABLE, 'F09');
-        Ticket::query()->whereKey($ticket->id)->update(['event_id' => $eventId]);
+        $this->assignTicketToEvent($ticket->id, $eventId);
 
         $userId = (string) Str::uuid();
         $reservation = $this->createHeldReservation($userId, [$ticket->id]);

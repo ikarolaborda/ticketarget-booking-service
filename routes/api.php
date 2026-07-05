@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\AdminBookingsController;
 use App\Http\Controllers\AdminStatsController;
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\EventAvailabilityController;
 use App\Http\Controllers\JoinQueueController;
 use App\Http\Controllers\MyBookingsController;
 use App\Http\Controllers\RefundBookingController;
@@ -25,6 +26,7 @@ Route::post('/reserve', ReserveController::class)->middleware([OptionalBearerAut
 Route::post('/booking', BookingController::class)->middleware(OptionalBearerAuth::class)->name('booking');
 Route::get('/booking/mine', MyBookingsController::class)->middleware(OptionalBearerAuth::class)->name('booking.mine');
 Route::get('/booking/verify', VerifyTicketController::class)->name('booking.verify');
+Route::get('/booking/availability/{event}', EventAvailabilityController::class)->name('booking.availability');
 Route::get('/booking/reservation/{id}', ShowReservationController::class)->middleware(OptionalBearerAuth::class)->name('booking.reservation.show');
 Route::post('/booking/{booking}/refund', RefundBookingController::class)->middleware(OptionalBearerAuth::class)->name('booking.refund');
 

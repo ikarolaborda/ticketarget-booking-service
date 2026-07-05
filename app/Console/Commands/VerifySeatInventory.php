@@ -10,20 +10,22 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Shadow-mode drift detector (DDD remediation Phase 2): compares every
- * seat_inventory row against tickets.status (the source of truth). Sustained
- * zero drift is the cutover criterion for flipping inventory ownership.
+ * Post-cutover drift detector: seat_inventory is the source of truth and
+ * catalog tickets.status is the mirrored shadow (rollback bridge). Drift
+ * here means the CATALOG_STATUS_DUAL_WRITE mirror is broken — resolve it
+ * before considering the rollback window closed. Retired together with the
+ * mirror flag and the shared database.
  */
 final class VerifySeatInventory extends Command
 {
     protected $signature = 'booking:verify-inventory {--strict : Exit non-zero when drift is found}';
 
-    protected $description = 'Compare shadow seat inventory against the authoritative ticket statuses';
+    protected $description = 'Compare the mirrored catalog ticket statuses against authoritative seat inventory';
 
     private const array EXPECTED = [
-        Ticket::STATUS_AVAILABLE => SeatInventory::STATUS_AVAILABLE,
-        Ticket::STATUS_UNAVAILABLE => SeatInventory::STATUS_HELD,
-        Ticket::STATUS_BOOKED => SeatInventory::STATUS_BOOKED,
+        SeatInventory::STATUS_AVAILABLE => Ticket::STATUS_AVAILABLE,
+        SeatInventory::STATUS_HELD => Ticket::STATUS_UNAVAILABLE,
+        SeatInventory::STATUS_BOOKED => Ticket::STATUS_BOOKED,
     ];
 
     public function handle(): int
@@ -38,16 +40,16 @@ final class VerifySeatInventory extends Command
 
             foreach ($rows as $row) {
                 $checked++;
-                $ticketStatus = $ticketStatuses[$row->ticket_id] ?? null;
-                $expected = $ticketStatus === null ? null : (self::EXPECTED[$ticketStatus] ?? null);
+                $mirrored = $ticketStatuses[$row->ticket_id] ?? null;
+                $expected = self::EXPECTED[$row->status] ?? null;
 
-                if ($expected !== $row->status) {
+                if ($mirrored !== $expected) {
                     $mismatches++;
                     $this->line(sprintf(
-                        'DRIFT ticket=%s ticket_status=%s inventory_status=%s',
+                        'DRIFT ticket=%s inventory_status=%s mirrored_ticket_status=%s',
                         $row->ticket_id,
-                        $ticketStatus ?? 'missing',
                         $row->status,
+                        $mirrored ?? 'missing',
                     ));
                 }
             }

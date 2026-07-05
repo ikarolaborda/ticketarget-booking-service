@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Models\SeatInventory;
 use App\Services\CapacityLedgerProjector;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Psr\Log\LoggerInterface;
 use RdKafka\Conf;
 use RdKafka\KafkaConsumer;
@@ -127,9 +129,46 @@ final class ConsumeCatalogEvents extends Command
 
         $zoneId = is_string($payload['zone_id'] ?? null) ? $payload['zone_id'] : null;
 
+        // Live events carry tickets[] with seat identities; seed new seats
+        // into the booking-owned inventory (insert-if-missing — never touches
+        // status of existing rows). Backfill events are count-only and rely
+        // on booking:seed-inventory instead.
+        $this->seedSeats($eventId, $zoneId, is_array($payload['tickets'] ?? null) ? $payload['tickets'] : []);
+
         return $projector->apply($eventKey, $eventId, $zoneId, (int) $count)
             ? self::OUTCOME_APPLIED
             : self::OUTCOME_DUPLICATE;
+    }
+
+    /**
+     * @param  list<mixed>  $tickets
+     */
+    private function seedSeats(string $eventId, ?string $zoneId, array $tickets): void
+    {
+        $rows = [];
+
+        foreach ($tickets as $ticket) {
+            if (! is_array($ticket) || ! is_string($ticket['id'] ?? null)) {
+                continue;
+            }
+
+            $rows[] = [
+                'ticket_id' => $ticket['id'],
+                'event_id' => $eventId,
+                'status' => SeatInventory::STATUS_AVAILABLE,
+                'reservation_id' => null,
+                'seat' => is_string($ticket['seat'] ?? null) ? $ticket['seat'] : null,
+                'price' => is_numeric($ticket['price'] ?? null) ? $ticket['price'] : null,
+                'type' => is_string($ticket['type'] ?? null) ? $ticket['type'] : null,
+                'zone_id' => $zoneId,
+                'source' => 'event',
+                'updated_at' => now(),
+            ];
+        }
+
+        if ($rows !== []) {
+            DB::table('seat_inventory')->insertOrIgnore($rows);
+        }
     }
 
     private function consumer(): KafkaConsumer

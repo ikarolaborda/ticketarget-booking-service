@@ -4,35 +4,47 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\SeatInventory;
+use App\Models\Ticket;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Phase 2 shadow mode: mirrors ticket-status transitions into the
- * booking-owned seat_inventory table. Upsert-based so rows never need to
- * pre-exist; runs inside the caller's transaction so the mirror is atomic
- * with the authoritative tickets.status change.
+ * Applies inventory transitions to booking-owned seat_inventory (the source
+ * of truth since the ownership cutover) and, while the rollback window is
+ * open (CATALOG_STATUS_DUAL_WRITE), mirrors the status to catalog
+ * tickets.status so a read-path rollback stays possible. Runs inside the
+ * caller's transaction. Once the flag is off, re-enabling requires a
+ * seat_inventory -> tickets backfill before reads can go back.
  */
 final readonly class SeatInventoryProjector
 {
+    private const array MIRROR = [
+        SeatInventory::STATUS_AVAILABLE => Ticket::STATUS_AVAILABLE,
+        SeatInventory::STATUS_HELD => Ticket::STATUS_UNAVAILABLE,
+        SeatInventory::STATUS_BOOKED => Ticket::STATUS_BOOKED,
+    ];
+
     /**
      * @param  list<string>  $ticketIds
      */
-    public function project(array $ticketIds, string $status, ?string $reservationId = null): void
+    public function transition(array $ticketIds, string $status, ?string $reservationId = null): void
     {
-        if ($ticketIds === [] || ! config('booking.inventory_dual_write')) {
+        if ($ticketIds === []) {
             return;
         }
 
-        $eventIds = DB::table('tickets')->whereIn('id', $ticketIds)->pluck('event_id', 'id');
+        DB::table('seat_inventory')
+            ->whereIn('ticket_id', $ticketIds)
+            ->update([
+                'status' => $status,
+                'reservation_id' => $reservationId,
+                'updated_at' => now(),
+            ]);
 
-        $rows = array_map(fn (string $ticketId): array => [
-            'ticket_id' => $ticketId,
-            'event_id' => $eventIds[$ticketId] ?? null,
-            'status' => $status,
-            'reservation_id' => $reservationId,
-            'updated_at' => now(),
-        ], $ticketIds);
-
-        DB::table('seat_inventory')->upsert($rows, ['ticket_id'], ['event_id', 'status', 'reservation_id', 'updated_at']);
+        if (config('booking.catalog_status_dual_write')) {
+            DB::table('tickets')
+                ->whereIn('id', $ticketIds)
+                ->update(['status' => self::MIRROR[$status]]);
+        }
     }
 }

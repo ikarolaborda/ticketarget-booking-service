@@ -7,7 +7,6 @@ namespace App\Actions;
 use App\Exceptions\SeatUnavailableException;
 use App\Models\Reservation;
 use App\Models\SeatInventory;
-use App\Models\Ticket;
 use App\Services\SeatInventoryProjector;
 use Illuminate\Contracts\Cache\Factory as CacheFactory;
 use Illuminate\Contracts\Cache\Lock;
@@ -51,19 +50,17 @@ final readonly class ReserveSeatsAction
 
         try {
             return $this->db->transaction(function () use ($userId, $ticketIds): Reservation {
-                $held = Ticket::query()
-                    ->whereIn('id', $ticketIds)
-                    ->where('status', Ticket::STATUS_AVAILABLE)
+                // Booking-owned inventory is the availability authority since
+                // the ownership cutover; catalog tables are not consulted.
+                $held = SeatInventory::query()
+                    ->whereIn('ticket_id', $ticketIds)
+                    ->where('status', SeatInventory::STATUS_AVAILABLE)
                     ->lockForUpdate()
                     ->get();
 
                 if ($held->count() !== count($ticketIds)) {
                     throw new SeatUnavailableException;
                 }
-
-                Ticket::query()
-                    ->whereIn('id', $ticketIds)
-                    ->update(['status' => Ticket::STATUS_UNAVAILABLE]);
 
                 $reservation = new Reservation;
                 $reservation->user_id = $userId;
@@ -72,18 +69,18 @@ final readonly class ReserveSeatsAction
                 $reservation->expires_at = now()->addMinutes(self::HOLD_MINUTES);
                 $reservation->seats = $held
                     ->sortBy('seat')
-                    ->map(static fn (Ticket $ticket): array => [
-                        'id' => $ticket->id,
-                        'event_id' => $ticket->event_id,
-                        'seat' => $ticket->seat,
-                        'price' => number_format((float) $ticket->price, 2, '.', ''),
-                        'type' => $ticket->type,
+                    ->map(static fn (SeatInventory $seat): array => [
+                        'id' => $seat->ticket_id,
+                        'event_id' => $seat->event_id,
+                        'seat' => $seat->seat,
+                        'price' => number_format((float) $seat->price, 2, '.', ''),
+                        'type' => $seat->type,
                     ])
                     ->values()
                     ->all();
                 $reservation->save();
 
-                $this->inventory->project($ticketIds, SeatInventory::STATUS_HELD, $reservation->id);
+                $this->inventory->transition($ticketIds, SeatInventory::STATUS_HELD, $reservation->id);
 
                 return $reservation;
             });

@@ -152,7 +152,7 @@ final class RefundTest extends BookingTestCase
         ]);
 
         $ticket = $this->createTicket(Ticket::STATUS_BOOKED, $seat.'-'.substr($eventId, 0, 4));
-        DB::table('tickets')->where('id', $ticket->id)->update(['event_id' => $eventId]);
+        $this->assignTicketToEvent($ticket->id, $eventId);
 
         $userId = (string) Str::uuid();
         $bookingId = $this->insertBooking($ticket->id, $userId, $amount);

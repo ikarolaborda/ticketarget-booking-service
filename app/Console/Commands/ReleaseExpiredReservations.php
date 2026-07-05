@@ -6,10 +6,10 @@ namespace App\Console\Commands;
 
 use App\Models\Reservation;
 use App\Models\SeatInventory;
-use App\Models\Ticket;
 use App\Services\SeatInventoryProjector;
 use Illuminate\Console\Command;
 use Illuminate\Database\ConnectionInterface;
+use Illuminate\Support\Facades\DB;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -48,12 +48,15 @@ final class ReleaseExpiredReservations extends Command
                     /** @var list<string> $ticketIds */
                     $ticketIds = $reservation->ticket_ids;
 
-                    Ticket::query()
-                        ->whereIn('id', $ticketIds)
-                        ->where('status', Ticket::STATUS_UNAVAILABLE)
-                        ->update(['status' => Ticket::STATUS_AVAILABLE]);
+                    // Release only seats still held — a seat that was
+                    // confirmed (booked) in a race must never be yanked back.
+                    $heldIds = DB::table('seat_inventory')
+                        ->whereIn('ticket_id', $ticketIds)
+                        ->where('status', SeatInventory::STATUS_HELD)
+                        ->pluck('ticket_id')
+                        ->all();
 
-                    $inventory->project($ticketIds, SeatInventory::STATUS_AVAILABLE);
+                    $inventory->transition($heldIds, SeatInventory::STATUS_AVAILABLE);
 
                     $reservation->status = Reservation::STATUS_RELEASED;
                     $reservation->save();

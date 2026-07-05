@@ -98,7 +98,7 @@ final class MyBookingsTest extends BookingTestCase
     {
         $ticket = $this->createTicket(Ticket::STATUS_BOOKED, $seat);
         $ticket->timestamps = false;
-        DB::table('tickets')->where('id', $ticket->id)->update(['event_id' => $eventId]);
+        $this->assignTicketToEvent($ticket->id, $eventId);
 
         $event = DB::table('events')->where('id', $eventId)->first();
 

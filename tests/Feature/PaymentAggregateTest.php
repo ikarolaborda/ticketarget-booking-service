@@ -9,6 +9,7 @@ use App\Domain\Payment\PaymentGateway;
 use App\Models\Booking;
 use App\Models\OutboxMessage;
 use App\Models\Payment;
+use App\Models\SeatInventory;
 use App\Models\Ticket;
 use App\Services\OutboxWriter;
 use Illuminate\Support\Facades\DB;
@@ -70,7 +71,7 @@ final class PaymentAggregateTest extends BookingTestCase
         ]);
 
         $ticket = $this->createTicket(Ticket::STATUS_UNAVAILABLE);
-        Ticket::query()->whereKey($ticket->id)->update(['event_id' => $eventId]);
+        $this->assignTicketToEvent($ticket->id, $eventId);
 
         $userId = (string) Str::uuid();
         $reservation = $this->createHeldReservation($userId, [$ticket->id]);
@@ -122,7 +123,7 @@ final class PaymentAggregateTest extends BookingTestCase
         $this->confirm($reservation->id, $userId)->assertStatus(422);
 
         // The contested seat is put back on hold, so the retry can succeed.
-        Ticket::query()->whereKey($stolen->id)->update(['status' => Ticket::STATUS_UNAVAILABLE]);
+        DB::table('seat_inventory')->where('ticket_id', $stolen->id)->update(['status' => SeatInventory::STATUS_HELD]);
 
         $this->confirm($reservation->id, $userId)->assertCreated();
 

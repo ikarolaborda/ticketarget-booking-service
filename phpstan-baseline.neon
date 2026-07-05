@@ -1,12 +1,6 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Property App\\Models\\Booking\:\:\$amount \(float\) does not accept string\.$#'
-			identifier: assign.propertyType
-			count: 1
-			path: app/Actions/ConfirmBookingAction.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Contracts\\Cache\\Repository\:\:lock\(\)\.$#'
 			identifier: method.notFound
 			count: 1
