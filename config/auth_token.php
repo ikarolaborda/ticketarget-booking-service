@@ -3,8 +3,9 @@
 declare(strict_types=1);
 
 return [
-    // Legacy symmetric secret. Consulted only while accept_hs256 stays on
-    // (RS256 migration overlap) and still used by the ticket-code issuer.
+    // Legacy symmetric secret for the retired HS256 verify path. Only consulted
+    // while accept_hs256 is on; empty after the RS256 cutover removed the env.
+    // (Ticket codes moved to their own ticket_code.secret.)
     'secret' => env('AUTH_JWT_SECRET', ''),
 
     'ttl_seconds' => (int) env('AUTH_JWT_TTL', 86400),

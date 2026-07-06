@@ -131,21 +131,7 @@ final class AdminStatsTest extends BookingTestCase
 
     private function adminToken(bool $isAdmin): string
     {
-        $encode = static fn (string $v): string => rtrim(strtr(base64_encode($v), '+/', '-_'), '=');
-
-        $header = $encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT'], JSON_THROW_ON_ERROR));
-        $payload = $encode(json_encode([
-            'iss' => config('auth_token.issuer'),
-            'sub' => (string) Str::uuid(),
-            'email' => 'admin@example.com',
-            'name' => 'Admin',
-            'is_admin' => $isAdmin,
-            'iat' => time(),
-            'exp' => time() + 3600,
-        ], JSON_THROW_ON_ERROR));
-        $signature = $encode(hash_hmac('sha256', $header.'.'.$payload, (string) config('auth_token.secret'), true));
-
-        return $header.'.'.$payload.'.'.$signature;
+        return $this->rs256Token(email: 'admin@example.com', isAdmin: $isAdmin);
     }
 
     private function seedBooking(string $amount, string $status, Carbon $createdAt, ?string $ticketId = null): Booking

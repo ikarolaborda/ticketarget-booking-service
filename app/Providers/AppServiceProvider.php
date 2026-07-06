@@ -38,7 +38,7 @@ final class AppServiceProvider extends ServiceProvider
         ));
 
         $this->app->singleton(TicketCodeIssuer::class, fn (): TicketCodeIssuer => new TicketCodeIssuer(
-            secret: (string) config('auth_token.secret'),
+            secret: (string) config('ticket_code.secret'),
         ));
 
         $this->app->singleton(QueueTokenIssuer::class, fn ($app): QueueTokenIssuer => new QueueTokenIssuer(
